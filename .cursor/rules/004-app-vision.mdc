@@ -1,0 +1,15 @@
+---
+description: Reglas sobre la estética y el comportamiento de usuario para mantener la consistencia "Cozy".
+globs: ["**/*"]
+---
+
+# App Vision: CozyHabit
+
+- **Estética**: Acogedora, cálida, tipo "Notebook" (cuaderno).
+- **UI Key Elements**:
+  - Fondo: Imagen con `BlurView` claro.
+  - Hoja del Día: Estética de papel rayado, checkboxes que tachan el texto.
+  - Mood Indicator: Slider de 1 a 10 con incremento de 0.5.
+- **Comportamiento**: 
+  - Al marcar un hábito como hecho, se dispara el modal de reflexión (habitDescription/mood) de forma fluida.
+  - Los hábitos semanales/mensuales no deben penalizar el porcentaje de éxito diario.

@@ -1,0 +1,16 @@
+---
+description: Reglas para el manejo de estilos con NativeWind y archivos externos. Se aplica al crear o editar componentes visuales.
+globs: ["src/components/**/*.tsx", "src/screens/**/*.tsx", "src/**/*.styles.ts"]
+---
+
+# Styling System (Strict Separation)
+
+- **Cero Estilos Inline**: No se permiten clases de Tailwind (`className`) ni estilos inline (`style={{...}}`) directamente en los archivos JSX.
+- **Archivos Separados**: Cada componente `MyComponent.tsx` debe tener su archivo `MyComponent.styles.ts`.
+- **Uso de Constantes**: Los estilos se definen como objetos de constantes de strings (NativeWind).
+- **Estilos Globales**: Antes de crear un estilo, verifica `src/styles/ui.styles.ts` para usar clases globales (contenedores, títulos, tarjetas).
+
+## Ejemplo de Estructura:
+Componente:
+`import { styles } from './MyComponent.styles';`
+`<View className={styles.container}>`

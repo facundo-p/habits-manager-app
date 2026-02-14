@@ -1,0 +1,14 @@
+---
+description: Reglas para la gestión de SQLite y el modelo de datos Habit/PerformedHabit.
+globs: ["src/services/db.ts", "src/services/habitService.ts", "src/types/*.ts"]
+---
+
+# Database & Domain Logic
+
+- **SQLite**: Usa `expo-sqlite` de forma asíncrona.
+- **Entidades**: 
+  - `Habit`: El molde (frecuencia, puntos base).
+  - `PerformedHabit`: La instancia (registro diario, descripción, puntos ganados).
+  - `MoodEntry`: Registro de humor (valor 1-10, step 0.5, timestamp).
+- **Consistencia**: Los puntos diarios se calculan sumando `points_earned` de la tabla `performed_habits`.
+- **Aislamiento**: Solo los archivos en `src/services/` pueden realizar consultas SQL directamente.

@@ -1,0 +1,15 @@
+---
+description: Reglas generales de calidad de código, refactorización y arquitectura. Se aplica a todos los archivos .ts y .tsx.
+globs: ["src/**/*.ts", "src/**/*.tsx"]
+---
+
+# Core Standards
+
+- **Encapsulamiento de Lógica**: Toda la lógica de negocio debe estar en `src/services/`. Los componentes solo invocan servicios.
+- **Regla de las 20 líneas**: Cualquier función que supere las 20 líneas debe ser refactorizada en funciones más pequeñas.
+- **Cero Duplicación**: Antes de implementar, busca funciones similares en el proyecto. Sigue el principio DRY.
+- **Configuración**: Prohibido el uso de strings o números mágicos. Usa `src/config/constants.ts`.
+- **Nomenclatura**: Usa nombres descriptivos en español (o inglés si prefieres, pero consistente). 
+
+## Proceso de Refactorización
+Si Cursor detecta una función compleja, debe proponer una división antes de proceder.
