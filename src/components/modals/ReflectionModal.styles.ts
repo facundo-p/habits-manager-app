@@ -3,51 +3,39 @@
  */
 
 import { StyleSheet } from 'react-native';
-import { text, card, input, button, overlay, mood, spacing, colors } from '../../styles/ui.styles';
+import { text, input, button, overlay, mood, spacing, colors } from '../../styles/ui.styles';
 
 // ─── NativeWind classes ─────────────────────────────────────────────
 
 export const styles = {
-  /** Backdrop oscuro */
   backdrop: overlay.backdrop,
-
-  /** Contenedor del sheet desde abajo */
   sheet: overlay.content,
 
   /** Título "Reflexión" */
   title: text.screenTitle,
-
-  /** Nombre del hábito */
   habitName: text.sectionTitle,
-
-  /** Gap entre secciones */
   sectionGap: spacing.sectionGap,
 
-  /** Label "¿Cómo te sientes?" */
+  /** Label */
   label: text.label,
-
-  /** Valor del mood (grande, serif) */
   moodValue: mood.valueLabel,
-
-  /** Contenedor del slider */
   sliderWrapper: 'mt-2 mb-1',
 
-  /** TextInput de reflexión */
+  /** Fila del campo de texto + botón mic */
+  textRow: 'flex-row items-start gap-2',
+  /** TextInput con flex-1 para compartir espacio con mic */
+  textAreaFlex: input.textArea + ' flex-1',
+  /** Botón del micrófono */
+  micButton: button.iconSmall + ' mt-3',
+
+  /** TextInput (modo sin mic, fallback) */
   textArea: input.textArea,
 
-  /** Botón principal "Guardar" */
+  /** Botones de acción */
   saveButton: button.primary,
-
-  /** Texto del botón "Guardar" */
   saveButtonText: button.primaryText,
-
-  /** Botón "Omitir" */
   skipButton: 'items-center py-3',
-
-  /** Texto del botón "Omitir" */
   skipText: text.caption,
-
-  /** Separador inferior */
   itemGap: spacing.itemGap,
 } as const;
 
@@ -67,3 +55,5 @@ export const nativeStyles = StyleSheet.create({
     height: 40,
   },
 });
+
+export { colors };

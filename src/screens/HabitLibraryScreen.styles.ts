@@ -18,17 +18,20 @@ export const styles = {
   paper: card.notebookPaper,
 
   // ─── Fila de hábito en la biblioteca ──────────────────────────
-  /** Fila: nombre + delete a la derecha */
   habitRow: 'flex-row items-center justify-between py-3',
-
-  /** Columna izquierda con nombre y metadata */
   habitInfo: 'flex-1 mr-3',
-
-  /** Nombre del hábito */
   habitName: text.body,
-
-  /** Metadata (frecuencia · puntos · categorías) */
   habitMeta: text.caption,
+  habitCount: text.captionSmall,
+
+  /** Nombre de hábito inactivo (opaco) */
+  habitNameInactive: text.body + ' opacity-40',
+
+  // ─── Acciones derecha ─────────────────────────────────────────
+  actionsRow: 'flex-row items-center gap-1',
+
+  /** Botón de toggle visibilidad (ojo) */
+  eyeButton: button.iconSmall,
 
   /** Botón de borrar (icono) */
   deleteButton: button.destructive,

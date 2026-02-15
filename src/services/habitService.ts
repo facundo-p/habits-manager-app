@@ -5,55 +5,75 @@
  * Los componentes NUNCA ejecutan SQL directamente.
  */
 
-import { getDatabase, generateId, getTodayPrefix, getNowTimestamp } from './db';
+import {
+  getDatabase,
+  generateId,
+  getTodayPrefix,
+  getNowTimestamp,
+  getTimestampForDate,
+} from './db';
 import type { Habit, DailyHabit, DailyStats } from '../types';
+
+// ─── SQL Constants ──────────────────────────────────────────────────
+
+const SQL_ACTIVE_HABITS = 'SELECT * FROM habits WHERE is_active = 1';
+
+const SQL_ALL_HABITS = 'SELECT * FROM habits';
+
+const SQL_PERFORMED_FOR_DAY =
+  "SELECT id, habit_id FROM performed_habits WHERE timestamp LIKE ? || '%'";
+
+const SQL_TOTAL_BY_FREQ =
+  'SELECT COALESCE(SUM(base_points), 0) as total FROM habits WHERE frequency = ? AND is_active = 1';
+
+const SQL_EARNED_FOR_DAY =
+  "SELECT COALESCE(SUM(points_earned), 0) as earned FROM performed_habits WHERE timestamp LIKE ? || '%'";
+
+const SQL_COMPLETION_COUNTS =
+  'SELECT habit_id, COUNT(*) as count FROM performed_habits GROUP BY habit_id';
 
 // ─── Consultas ──────────────────────────────────────────────────────
 
-export async function getDailyHabits(): Promise<DailyHabit[]> {
+/** Hábitos activos con estado de completado para una fecha (default: hoy). */
+export async function getHabitsForDay(
+  datePrefix?: string,
+): Promise<DailyHabit[]> {
   const db = await getDatabase();
-  const today = getTodayPrefix();
-
-  const habits = await db.getAllAsync<Habit>('SELECT * FROM habits');
+  const day = datePrefix ?? getTodayPrefix();
+  const habits = await db.getAllAsync<Habit>(SQL_ACTIVE_HABITS);
 
   const performed = await db.getAllAsync<{ id: string; habit_id: string }>(
-    "SELECT id, habit_id FROM performed_habits WHERE timestamp LIKE ? || '%'",
-    [today],
+    SQL_PERFORMED_FOR_DAY,
+    [day],
   );
 
-  const performedMap = new Map(performed.map((p) => [p.habit_id, p.id]));
-
-  return habits.map((habit) => ({
-    ...habit,
-    completedToday: performedMap.has(habit.id),
-    performedHabitId: performedMap.get(habit.id) ?? null,
-  }));
+  return enrichWithPerformed(habits, performed);
 }
 
-export async function getDailyPointsProgress(): Promise<DailyStats> {
+/** Progreso de puntos para hábitos de frecuencia daily (para header global). */
+export async function getDailyPointsProgress(
+  datePrefix?: string,
+): Promise<DailyStats> {
   const db = await getDatabase();
-  const today = getTodayPrefix();
+  const day = datePrefix ?? getTodayPrefix();
 
   const totalRow = await db.getFirstAsync<{ total: number }>(
-    "SELECT COALESCE(SUM(base_points), 0) as total FROM habits WHERE frequency = 'daily'",
+    SQL_TOTAL_BY_FREQ,
+    ['daily'],
   );
 
   const earnedRow = await db.getFirstAsync<{ earned: number }>(
-    "SELECT COALESCE(SUM(points_earned), 0) as earned FROM performed_habits WHERE timestamp LIKE ? || '%'",
-    [today],
+    SQL_EARNED_FOR_DAY,
+    [day],
   );
 
-  const total = totalRow?.total ?? 0;
-  const earned = earnedRow?.earned ?? 0;
-  const percentage = total > 0 ? Math.round((earned / total) * 100) : 0;
-
-  return { earned, total, percentage };
+  return buildStats(earnedRow?.earned ?? 0, totalRow?.total ?? 0);
 }
 
-/** Devuelve todos los hábitos "molde" (para la Biblioteca). */
+/** Todos los hábitos (incluyendo inactivos) para la Biblioteca. */
 export async function getAllHabits(): Promise<Habit[]> {
   const db = await getDatabase();
-  return db.getAllAsync<Habit>('SELECT * FROM habits');
+  return db.getAllAsync<Habit>(SQL_ALL_HABITS);
 }
 
 /** Obtiene la descripción de un performed_habit (para edición). */
@@ -68,16 +88,29 @@ export async function getPerformedDescription(
   return row?.habit_description ?? '';
 }
 
+/** Conteo de completados por habit_id (para la biblioteca). */
+export async function getCompletionCounts(): Promise<Record<string, number>> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ habit_id: string; count: number }>(
+    SQL_COMPLETION_COUNTS,
+  );
+  return Object.fromEntries(rows.map((r) => [r.habit_id, r.count]));
+}
+
 // ─── Mutaciones ─────────────────────────────────────────────────────
 
-/** Marca un hábito como hecho hoy. Devuelve el ID del performed_habit creado. */
-export async function markHabitDone(habit: DailyHabit): Promise<string> {
+/** Marca un hábito como hecho. Acepta datePrefix para modo histórico. */
+export async function markHabitDone(
+  habit: DailyHabit,
+  datePrefix?: string,
+): Promise<string> {
   const db = await getDatabase();
   const id = generateId();
+  const ts = datePrefix ? getTimestampForDate(datePrefix) : getNowTimestamp();
 
   await db.runAsync(
     'INSERT INTO performed_habits (id, habit_id, timestamp, points_earned, categories_used) VALUES (?, ?, ?, ?, ?)',
-    [id, habit.id, getNowTimestamp(), habit.base_points, habit.default_categories],
+    [id, habit.id, ts, habit.base_points, habit.default_categories],
   );
 
   return id;
@@ -89,7 +122,7 @@ export async function unmarkHabit(performedHabitId: string): Promise<void> {
   await db.runAsync('DELETE FROM performed_habits WHERE id = ?', [performedHabitId]);
 }
 
-/** Actualiza la descripción/reflexión de un performed_habit existente. */
+/** Actualiza la descripción/reflexión de un performed_habit. */
 export async function updatePerformedDescription(
   performedHabitId: string,
   description: string,
@@ -101,9 +134,20 @@ export async function updatePerformedDescription(
   );
 }
 
+/** Activa o desactiva un hábito. */
+export async function toggleHabitActive(
+  habitId: string,
+  isActive: boolean,
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync('UPDATE habits SET is_active = ? WHERE id = ?', [
+    isActive ? 1 : 0,
+    habitId,
+  ]);
+}
+
 // ─── CRUD de hábitos "molde" (Biblioteca) ────────────────────────────
 
-/** Crea un hábito molde. Devuelve el ID generado. */
 export async function createHabit(
   name: string,
   frequency: string,
@@ -122,7 +166,6 @@ export async function createHabit(
   return id;
 }
 
-/** Actualiza un hábito molde existente. */
 export async function updateHabit(
   id: string,
   name: string,
@@ -139,8 +182,26 @@ export async function updateHabit(
   );
 }
 
-/** Elimina un hábito molde (CASCADE borra performed_habits). */
 export async function deleteHabit(habitId: string): Promise<void> {
   const db = await getDatabase();
   await db.runAsync('DELETE FROM habits WHERE id = ?', [habitId]);
+}
+
+// ─── Helpers internos ───────────────────────────────────────────────
+
+function enrichWithPerformed(
+  habits: Habit[],
+  performed: { id: string; habit_id: string }[],
+): DailyHabit[] {
+  const map = new Map(performed.map((p) => [p.habit_id, p.id]));
+  return habits.map((h) => ({
+    ...h,
+    completedToday: map.has(h.id),
+    performedHabitId: map.get(h.id) ?? null,
+  }));
+}
+
+function buildStats(earned: number, total: number): DailyStats {
+  const pct = total > 0 ? Math.round((earned / total) * 100) : 0;
+  return { earned, total, percentage: pct };
 }

@@ -17,8 +17,9 @@ import { StatsScreen } from './src/screens/StatsScreen';
 import { ROUTES } from './src/config/constants';
 import { tabBarTheme, iconDefaults, colors } from './src/styles/ui.styles';
 import { initDatabase } from './src/services/db';
+import type { RootTabParamList } from './src/types';
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<RootTabParamList>();
 
 /**
  * Estilos nativos para la pantalla de carga.
@@ -77,21 +78,21 @@ export default function App() {
             }}
           >
             <Tab.Screen
-              name={ROUTES.DAILY_SHEET}
+              name={ROUTES.DAILY_SHEET as 'Hoy'}
               component={DailySheetScreen}
               options={{
                 tabBarIcon: ({ color }) => TabIcon(CalendarCheck, color),
               }}
             />
             <Tab.Screen
-              name={ROUTES.HABIT_LIBRARY}
+              name={ROUTES.HABIT_LIBRARY as 'Biblioteca'}
               component={HabitLibraryScreen}
               options={{
                 tabBarIcon: ({ color }) => TabIcon(BookOpen, color),
               }}
             />
             <Tab.Screen
-              name={ROUTES.STATS}
+              name={ROUTES.STATS as 'Progreso'}
               component={StatsScreen}
               options={{
                 tabBarIcon: ({ color }) => TabIcon(BarChart3, color),

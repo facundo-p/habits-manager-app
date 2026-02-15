@@ -21,7 +21,10 @@ export function BottomSheet({ visible, children }: BottomSheetProps) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className={styles.backdrop}
       >
-        <View className={styles.sheet}>
+        <View
+          className={styles.sheet}
+          style={{ marginTop: 24, alignSelf: 'stretch' }}
+        >
           {children}
         </View>
       </KeyboardAvoidingView>

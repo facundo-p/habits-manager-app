@@ -11,7 +11,7 @@ import type { Habit, DaySummaryHabit, CategoryPoints, WeeklyComparison } from '.
 // ─── SQL Constants ──────────────────────────────────────────────────
 
 const SQL_DAILY_TOTAL =
-  "SELECT COALESCE(SUM(base_points), 0) as total FROM habits WHERE frequency = 'daily'";
+  "SELECT COALESCE(SUM(base_points), 0) as total FROM habits WHERE frequency = 'daily' AND is_active = 1";
 
 const SQL_EARNED_BY_DAY =
   "SELECT SUBSTR(timestamp, 9, 2) as day, SUM(points_earned) as earned FROM performed_habits WHERE timestamp LIKE ? || '%' GROUP BY day";
@@ -23,7 +23,7 @@ const SQL_WEEK_TOTAL =
   'SELECT COALESCE(SUM(points_earned), 0) as total FROM performed_habits WHERE timestamp >= ? AND timestamp < ?';
 
 const SQL_DAILY_HABITS =
-  "SELECT * FROM habits WHERE frequency = 'daily'";
+  "SELECT * FROM habits WHERE frequency = 'daily' AND is_active = 1";
 
 const SQL_PERFORMED_ON_DATE =
   "SELECT habit_id FROM performed_habits WHERE timestamp LIKE ? || '%'";

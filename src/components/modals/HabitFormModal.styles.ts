@@ -30,6 +30,12 @@ export const styles = {
   chipText: chip.text,
   chipTextSelected: chip.textSelected,
 
+  /** Fila de chip con botón info al lado */
+  chipWithInfo: 'flex-row items-center mr-2 mb-2',
+  /** Botón (i) al lado del chip */
+  infoButton: 'w-5 h-5 rounded-full items-center justify-center ml-0.5',
+  infoButtonText: 'text-[10px] font-bold text-amber-500',
+
   // ─── Botones de acción ─────────────────────────────────────────
   saveButton: button.primary,
   saveButtonText: button.primaryText,

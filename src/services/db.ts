@@ -26,14 +26,18 @@ export function generateId(): string {
 
 // ─── Date helpers (compartidos entre services) ──────────────────────
 
-/** Devuelve la fecha de hoy como 'YYYY-MM-DD' */
 export function getTodayPrefix(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** Devuelve timestamp ISO 8601 sin T: 'YYYY-MM-DD HH:MM:SS' */
 export function getNowTimestamp(): string {
   return new Date().toISOString().replace('T', ' ').slice(0, 19);
+}
+
+/** Timestamp para una fecha específica (usa hora actual). */
+export function getTimestampForDate(datePrefix: string): string {
+  const time = new Date().toISOString().slice(11, 19);
+  return `${datePrefix} ${time}`;
 }
 
 // ─── Inicialización ─────────────────────────────────────────────────
@@ -47,7 +51,8 @@ const SCHEMA_SQL = `
     name TEXT NOT NULL,
     frequency TEXT NOT NULL DEFAULT 'daily',
     base_points INTEGER NOT NULL DEFAULT 1,
-    default_categories TEXT DEFAULT '[]'
+    default_categories TEXT DEFAULT '[]',
+    is_active INTEGER NOT NULL DEFAULT 1
   );
 
   CREATE TABLE IF NOT EXISTS performed_habits (
@@ -73,7 +78,22 @@ const SCHEMA_SQL = `
 export async function initDatabase(): Promise<void> {
   const db = await getDatabase();
   await db.execAsync(SCHEMA_SQL);
+  await migrateSchema(db);
   await seedHabits(db);
+}
+
+// ─── Migración (para DBs existentes sin is_active) ──────────────────
+
+async function migrateSchema(db: SQLite.SQLiteDatabase): Promise<void> {
+  const cols = await db.getAllAsync<{ name: string }>(
+    'PRAGMA table_info(habits)',
+  );
+  const hasIsActive = cols.some((c) => c.name === 'is_active');
+  if (!hasIsActive) {
+    await db.execAsync(
+      'ALTER TABLE habits ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1',
+    );
+  }
 }
 
 // ─── Seed Data ──────────────────────────────────────────────────────

@@ -5,12 +5,15 @@
  * según el esquema definido en la Regla 003.
  */
 
+// ─── Entidades de BD ────────────────────────────────────────────────
+
 export interface Habit {
   id: string;
   name: string;
   frequency: 'daily' | 'weekly' | 'monthly';
   base_points: number;
-  default_categories: string; // JSON string, ej: '["paz","fisico"]'
+  default_categories: string; // JSON string, ej: '["salud_fisica"]'
+  is_active: number; // 0 | 1 (SQLite boolean)
 }
 
 export interface PerformedHabit {
@@ -30,17 +33,26 @@ export interface MoodEntry {
   habit_id: string | null;
 }
 
+// ─── Vistas enriquecidas ────────────────────────────────────────────
+
 /** Habit enriquecido con estado de completado para la vista diaria */
 export interface DailyHabit extends Habit {
   completedToday: boolean;
   performedHabitId: string | null;
 }
 
-/** Progreso de puntos del día */
+/** Progreso de puntos */
 export interface DailyStats {
   earned: number;
   total: number;
   percentage: number;
+}
+
+/** Grupo de hábitos por frecuencia con sus stats */
+export interface FrequencyGroup {
+  frequency: 'daily' | 'weekly' | 'monthly';
+  habits: DailyHabit[];
+  stats: DailyStats;
 }
 
 /** Datos del hábito pendiente de reflexión (modal abierto) */
@@ -60,22 +72,43 @@ export interface HabitFormData {
   categories: string[];
 }
 
+/** Habit de biblioteca con contador de completados */
+export interface LibraryHabit extends Habit {
+  completionCount: number;
+}
+
 // ─── Stats ──────────────────────────────────────────────────────────
 
-/** Resumen de un hábito en una fecha específica (heatmap detail) */
 export interface DaySummaryHabit {
   name: string;
   completed: boolean;
 }
 
-/** Puntos acumulados por categoría (pie chart) */
 export interface CategoryPoints {
   category: string;
   points: number;
 }
 
-/** Comparativa semanal de puntos */
 export interface WeeklyComparison {
   thisWeek: number;
   lastWeek: number;
 }
+
+// ─── Área de hábito (constante tipada) ──────────────────────────────
+
+export interface HabitArea {
+  readonly id: string;
+  readonly label: string;
+  readonly description: string;
+  readonly examples: readonly string[];
+  readonly color: string;
+  readonly iconName: string;
+}
+
+// ─── Navegación ─────────────────────────────────────────────────────
+
+export type RootTabParamList = {
+  Hoy: { date?: string } | undefined;
+  Biblioteca: undefined;
+  Progreso: undefined;
+};

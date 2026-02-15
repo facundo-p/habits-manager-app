@@ -28,9 +28,9 @@ export const FREQUENCY_OPTIONS = [
 ] as const;
 
 export const FREQUENCY_LABELS: Record<string, string> = {
-  daily: 'Diario',
-  weekly: 'Semanal',
-  monthly: 'Mensual',
+  daily: 'Diarios',
+  weekly: 'Semanales',
+  monthly: 'Mensuales',
 };
 
 // ─── Puntos base ────────────────────────────────────────────────────
@@ -38,21 +38,116 @@ export const BASE_POINTS_MIN = 1;
 export const BASE_POINTS_MAX = 10;
 export const BASE_POINTS_DEFAULT = 1;
 
-// ─── Categorías de hábitos ──────────────────────────────────────────
-export const HABIT_CATEGORIES = [
-  { id: 'paz', label: 'Paz interior' },
-  { id: 'fisico', label: 'Bienestar físico' },
-  { id: 'aprendizaje', label: 'Aprendizaje' },
-  { id: 'social', label: 'Social' },
-  { id: 'creatividad', label: 'Creatividad' },
-  { id: 'productividad', label: 'Productividad' },
+// ─── Áreas de hábitos (9 categorías enriquecidas) ───────────────────
+
+export const HABIT_AREAS = [
+  {
+    id: 'salud_fisica',
+    label: 'Salud Física',
+    description: 'Cuidar tu cuerpo a través del movimiento, nutrición y descanso.',
+    examples: ['Caminar 30 min', 'Beber 2L de agua', 'Dormir 8 horas'],
+    color: '#4ade80',
+    iconName: 'Heart',
+  },
+  {
+    id: 'mental',
+    label: 'Salud Mental',
+    description: 'Fortalecer tu bienestar emocional y cognitivo.',
+    examples: ['Meditar 10 min', 'Journaling', 'Respiración consciente'],
+    color: '#93c5fd',
+    iconName: 'Brain',
+  },
+  {
+    id: 'relaciones',
+    label: 'Relaciones',
+    description: 'Nutrir vínculos con familia, amigos y comunidad.',
+    examples: ['Llamar a un amigo', 'Cena familiar', 'Mensaje de gratitud'],
+    color: '#fda4af',
+    iconName: 'Users',
+  },
+  {
+    id: 'proposito',
+    label: 'Propósito',
+    description: 'Avanzar en tus metas profesionales y de vida.',
+    examples: ['Proyecto personal', 'Planificar la semana', 'Networking'],
+    color: '#fbbf24',
+    iconName: 'Target',
+  },
+  {
+    id: 'economia',
+    label: 'Economía',
+    description: 'Gestionar tus finanzas de forma consciente.',
+    examples: ['Revisar gastos', 'Ahorrar', 'Leer sobre inversiones'],
+    color: '#67e8f9',
+    iconName: 'Wallet',
+  },
+  {
+    id: 'crecimiento',
+    label: 'Crecimiento',
+    description: 'Aprender y desarrollar nuevas habilidades.',
+    examples: ['Leer 20 páginas', 'Curso online', 'Practicar idioma'],
+    color: '#c4b5fd',
+    iconName: 'TrendingUp',
+  },
+  {
+    id: 'espiritualidad',
+    label: 'Espiritualidad',
+    description: 'Conectar con tu interior y encontrar paz.',
+    examples: ['Oración', 'Meditación guiada', 'Gratitud diaria'],
+    color: '#86efac',
+    iconName: 'Sparkles',
+  },
+  {
+    id: 'recreacion',
+    label: 'Recreación',
+    description: 'Disfrutar de actividades que te revitalicen.',
+    examples: ['Hobby creativo', 'Paseo al aire libre', 'Ver una película'],
+    color: '#fdba74',
+    iconName: 'Palette',
+  },
+  {
+    id: 'entorno',
+    label: 'Entorno',
+    description: 'Mantener y mejorar tu espacio vital.',
+    examples: ['Ordenar escritorio', 'Limpiar casa', 'Cuidar plantas'],
+    color: '#a3e635',
+    iconName: 'Home',
+  },
 ] as const;
+
+/** Mapa de acceso rápido por ID de área. */
+export const AREAS_MAP = Object.fromEntries(
+  HABIT_AREAS.map((a) => [a.id, a]),
+) as Record<string, (typeof HABIT_AREAS)[number]>;
+
+/** Colores para cada área/categoría en el pie chart (incluye legacy). */
+export const CATEGORY_CHART_COLORS: Record<string, string> = {
+  ...Object.fromEntries(HABIT_AREAS.map((a) => [a.id, a.color])),
+  // Legacy mappings para datos existentes
+  paz: '#86efac',
+  fisico: '#4ade80',
+  aprendizaje: '#c4b5fd',
+  social: '#fda4af',
+  creatividad: '#fdba74',
+  productividad: '#fbbf24',
+};
+
+/** Labels legibles derivados de HABIT_AREAS (incluye legacy). */
+export const CATEGORY_LABELS: Record<string, string> = {
+  ...Object.fromEntries(HABIT_AREAS.map((a) => [a.id, a.label])),
+  paz: 'Espiritualidad',
+  fisico: 'Salud Física',
+  aprendizaje: 'Crecimiento',
+  social: 'Relaciones',
+  creatividad: 'Recreación',
+  productividad: 'Propósito',
+};
 
 // ─── Seed data (hábitos iniciales de prueba) ────────────────────────
 export const SEED_HABITS = [
-  { name: 'Meditación matutina', frequency: 'daily', basePoints: 2, categories: '["paz"]' },
-  { name: 'Caminata 20 min', frequency: 'daily', basePoints: 3, categories: '["fisico"]' },
-  { name: 'Lectura técnica', frequency: 'daily', basePoints: 2, categories: '["aprendizaje"]' },
+  { name: 'Meditación matutina', frequency: 'daily', basePoints: 2, categories: '["espiritualidad"]' },
+  { name: 'Caminata 20 min', frequency: 'daily', basePoints: 3, categories: '["salud_fisica"]' },
+  { name: 'Lectura técnica', frequency: 'daily', basePoints: 2, categories: '["crecimiento"]' },
 ] as const;
 
 // ─── UI ─────────────────────────────────────────────────────────────
@@ -74,44 +169,29 @@ export const ALERT_DELETE_HABIT = {
   cancel: 'Cancelar',
 } as const;
 
-// ─── Stats / Charts ─────────────────────────────────────────────────
-
-/** Colores del heatmap por nivel de cumplimiento */
-export const HEATMAP_COLORS = {
-  empty: '#fffbeb',    // amber50 (sin actividad)
-  low: '#fde68a',      // amber200 (1-24 %)
-  medium: '#fbbf24',   // amber400 (25-49 %)
-  good: '#bbf7d0',     // sage200 (50-74 %)
-  great: '#4ade80',    // sage400 (75-99 %)
-  full: '#15803d',     // sage700 (100 %)
+export const ALERT_VOICE_UNAVAILABLE = {
+  title: 'Dictado no disponible',
+  message: 'El dictado de voz requiere una build de desarrollo (no Expo Go).',
 } as const;
 
-/** Colores para cada categoría en el pie chart */
-export const CATEGORY_CHART_COLORS: Record<string, string> = {
-  paz: '#86efac',
-  fisico: '#fbbf24',
-  aprendizaje: '#93c5fd',
-  social: '#fda4af',
-  creatividad: '#c4b5fd',
-  productividad: '#67e8f9',
-};
+// ─── Stats / Charts ─────────────────────────────────────────────────
+export const HEATMAP_COLORS = {
+  empty: '#fffbeb',
+  low: '#fde68a',
+  medium: '#fbbf24',
+  good: '#bbf7d0',
+  great: '#4ade80',
+  full: '#15803d',
+} as const;
 
-/** Labels legibles derivados de HABIT_CATEGORIES */
-export const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
-  HABIT_CATEGORIES.map((c) => [c.id, c.label]),
-);
-
-/** Nombres de meses en español (índice 0 = enero) */
 export const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ] as const;
 
-/** Etiquetas de días de la semana (L-D, empezando lunes) */
 export const WEEKDAY_LABELS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'] as const;
 
 // ─── AppBackground ──────────────────────────────────────────────────
-/** URL temporal — reemplazar por require('../../assets/images/background.jpg') */
 export const BACKGROUND_IMAGE_URI =
   'https://images.unsplash.com/photo-1516541196182-6bdb0516ed27?w=800&q=80';
 export const BLUR_INTENSITY = 20;

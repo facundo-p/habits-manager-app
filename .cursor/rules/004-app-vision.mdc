@@ -15,6 +15,8 @@ globs: ["src/components/layout/**/*", "src/screens/**/*", "src/styles/ui.styles.
 
 ## 2. Estética "Notebook" (Cuaderno)
 - **Papel**: Los contenedores principales deben usar la clase `notebookPaper` de `ui.styles.ts` (blanco hueso, sombra suave, borde izquierdo simulando el margen de un cuaderno).
+- **Margen Anillado**: El componente `notebookPaper` debe incluir un borde izquierdo decorativo que simule un anillado espiral (puedes usar un patrón de círculos pequeños o un borde segmentado).
+- **TopSheet Modal**: Todos los modales de entrada (Reflection, HabitForm, AreaInfo) deben renderizarse en la parte SUPERIOR de la pantalla (`justify-content: flex-start`) con una animación de caída.
 - **Checklist**: Al marcar un hábito, el texto debe aplicar un estilo `line-through` con un color sepia suave, simulando un tachado a mano.
 - **Iconografía**: Usa `lucide-react-native` con trazos finos y colores tierra.
 
@@ -22,3 +24,7 @@ globs: ["src/components/layout/**/*", "src/screens/**/*", "src/styles/ui.styles.
 - **Control**: Slider horizontal con valores de 1.0 a 10.0.
 - **Snap**: Debe permitir incrementos de 0.5.
 - **Feedback**: El valor seleccionado debe mostrarse con una tipografía Serif cálida.
+
+### Navegación
+- El botón físico "Atrás" debe cerrar modales abiertos antes de salir de la pantalla.
+- Al terminar una edición histórica, el flujo debe retornar a la pantalla de origen (Stats).

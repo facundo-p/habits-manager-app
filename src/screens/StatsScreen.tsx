@@ -1,36 +1,34 @@
+/**
+ * StatsScreen — Pantalla de progreso con heatmap, pie chart y comparación.
+ *
+ * Al tocar un día en el heatmap, se puede navegar a DailySheet
+ * en modo histórico para editar hábitos de esa fecha.
+ */
+
 import React, { useState, useCallback } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
-import { ChevronLeft, ChevronRight, Check, X } from 'lucide-react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { ChevronLeft, ChevronRight, Check, X, Edit3 } from 'lucide-react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
-  MONTH_NAMES,
-  WEEKDAY_LABELS,
-  CATEGORY_LABELS,
-  CATEGORY_CHART_COLORS,
+  MONTH_NAMES, WEEKDAY_LABELS, CATEGORY_LABELS, CATEGORY_CHART_COLORS, ROUTES,
 } from '../config/constants';
 import {
-  getMonthlyHeatmapData,
-  getCategoryDistribution,
-  getWeeklyComparison,
-  getHabitsForDate,
+  getMonthlyHeatmapData, getCategoryDistribution, getWeeklyComparison, getHabitsForDate,
 } from '../services/statsService';
 import {
-  styles,
-  nativeStyles,
-  chartConfig,
-  heatmapCellBg,
-  heatmapTextColor,
-  compBarWidth,
-  colors,
-  CHART_WIDTH,
-  CHART_HEIGHT,
+  styles, nativeStyles, chartConfig, heatmapCellBg, heatmapTextColor, compBarWidth,
+  colors, CHART_WIDTH, CHART_HEIGHT,
 } from './StatsScreen.styles';
-import type { DaySummaryHabit, CategoryPoints, WeeklyComparison } from '../types';
+import type { DaySummaryHabit, CategoryPoints, WeeklyComparison, RootTabParamList } from '../types';
+
+type StatsNavProp = BottomTabNavigationProp<RootTabParamList, 'Progreso'>;
 
 // ─── Pantalla principal ─────────────────────────────────────────────
 
 export function StatsScreen() {
+  const navigation = useNavigation<StatsNavProp>();
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -49,31 +47,30 @@ export function StatsScreen() {
       getCategoryDistribution(month, year),
       getWeeklyComparison(),
     ]);
-    setHeatmap(h);
-    setCategories(c);
-    setWeekly(w);
-    setIsLoading(false);
-    setSelectedDay(null);
+    setHeatmap(h); setCategories(c); setWeekly(w);
+    setIsLoading(false); setSelectedDay(null);
   }, [month, year]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadStats();
-    }, [loadStats]),
-  );
+  useFocusEffect(useCallback(() => { loadStats(); }, [loadStats]));
 
   const handleDayPress = useCallback(
     async (day: number) => {
       const isSame = selectedDay === day;
       setSelectedDay(isSame ? null : day);
       if (!isSame) {
-        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dateStr = buildDateStr(year, month, day);
         const habits = await getHabitsForDate(dateStr);
         setDaySummary(habits);
       }
     },
     [selectedDay, month, year],
   );
+
+  const handleEditDay = useCallback(() => {
+    if (selectedDay === null) return;
+    const dateStr = buildDateStr(year, month, selectedDay);
+    navigation.navigate(ROUTES.DAILY_SHEET as 'Hoy', { date: dateStr });
+  }, [selectedDay, month, year, navigation]);
 
   const goToPrev = useCallback(() => {
     setMonth((m) => (m === 1 ? 12 : m - 1));
@@ -101,20 +98,18 @@ export function StatsScreen() {
       <View className={styles.titleGap} />
 
       <HeatmapSection
-        month={month}
-        year={year}
-        cells={cells}
-        heatmap={heatmap}
-        selectedDay={selectedDay}
-        onDayPress={handleDayPress}
-        onPrev={goToPrev}
-        onNext={goToNext}
+        month={month} year={year} cells={cells} heatmap={heatmap}
+        selectedDay={selectedDay} onDayPress={handleDayPress}
+        onPrev={goToPrev} onNext={goToNext}
       />
 
       {selectedDay !== null && (
         <>
           <View className={styles.itemGap} />
-          <DayDetailCard day={selectedDay} month={month} habits={daySummary} />
+          <DayDetailCard
+            day={selectedDay} month={month} habits={daySummary}
+            onEdit={handleEditDay}
+          />
         </>
       )}
 
@@ -131,63 +126,33 @@ export function StatsScreen() {
 
 // ─── Heatmap Section ────────────────────────────────────────────────
 
-function HeatmapSection({
-  month,
-  year,
-  cells,
-  heatmap,
-  selectedDay,
-  onDayPress,
-  onPrev,
-  onNext,
-}: {
-  month: number;
-  year: number;
-  cells: (number | null)[];
-  heatmap: Record<number, number>;
-  selectedDay: number | null;
-  onDayPress: (day: number) => void;
-  onPrev: () => void;
-  onNext: () => void;
+function HeatmapSection(props: {
+  month: number; year: number; cells: (number | null)[];
+  heatmap: Record<number, number>; selectedDay: number | null;
+  onDayPress: (day: number) => void; onPrev: () => void; onNext: () => void;
 }) {
+  const { month, year, cells, heatmap, selectedDay, onDayPress, onPrev, onNext } = props;
   return (
     <View className={styles.section}>
       <MonthNavigator month={month} year={year} onPrev={onPrev} onNext={onNext} />
       <WeekdayHeaders />
       <View className={styles.gridContainer}>
         {cells.map((day, i) => (
-          <HeatmapCell
-            key={i}
-            day={day}
-            percentage={day ? heatmap[day] : undefined}
-            isSelected={day === selectedDay}
-            onPress={day ? () => onDayPress(day) : undefined}
-          />
+          <HeatmapCell key={i} day={day} percentage={day ? heatmap[day] : undefined}
+            isSelected={day === selectedDay} onPress={day ? () => onDayPress(day) : undefined} />
         ))}
       </View>
     </View>
   );
 }
 
-function MonthNavigator({
-  month,
-  year,
-  onPrev,
-  onNext,
-}: {
-  month: number;
-  year: number;
-  onPrev: () => void;
-  onNext: () => void;
-}) {
+function MonthNavigator({ month, year, onPrev, onNext }: { month: number; year: number; onPrev: () => void; onNext: () => void }) {
   return (
     <View className={styles.monthNav}>
       <Pressable className={styles.navButton} onPress={onPrev}>
         <ChevronLeft color={colors.amber700} size={22} />
       </Pressable>
-      <Text className={styles.monthLabel}>
-        {MONTH_NAMES[month - 1]} {year}
-      </Text>
+      <Text className={styles.monthLabel}>{MONTH_NAMES[month - 1]} {year}</Text>
       <Pressable className={styles.navButton} onPress={onNext}>
         <ChevronRight color={colors.amber700} size={22} />
       </Pressable>
@@ -207,50 +172,36 @@ function WeekdayHeaders() {
   );
 }
 
-function HeatmapCell({
-  day,
-  percentage,
-  isSelected,
-  onPress,
-}: {
-  day: number | null;
-  percentage: number | undefined;
-  isSelected: boolean;
-  onPress?: () => void;
+function HeatmapCell({ day, percentage, isSelected, onPress }: {
+  day: number | null; percentage: number | undefined; isSelected: boolean; onPress?: () => void;
 }) {
-  if (day === null) {
-    return <View style={nativeStyles.cell} />;
-  }
+  if (day === null) return <View style={nativeStyles.cell} />;
 
   return (
     <Pressable
       style={[nativeStyles.cell, heatmapCellBg(percentage), isSelected && nativeStyles.selectedCell]}
       onPress={onPress}
     >
-      <Text className={styles.cellDay} style={{ color: heatmapTextColor(percentage) }}>
-        {day}
-      </Text>
+      <Text className={styles.cellDay} style={{ color: heatmapTextColor(percentage) }}>{day}</Text>
     </Pressable>
   );
 }
 
 // ─── Day Detail ─────────────────────────────────────────────────────
 
-function DayDetailCard({
-  day,
-  month,
-  habits,
-}: {
-  day: number;
-  month: number;
-  habits: DaySummaryHabit[];
+function DayDetailCard({ day, month, habits, onEdit }: {
+  day: number; month: number; habits: DaySummaryHabit[]; onEdit: () => void;
 }) {
   return (
     <View className={styles.section}>
-      <Text className={styles.detailTitle}>
-        Hábitos del {day} de {MONTH_NAMES[month - 1].toLowerCase()}
-      </Text>
-      <View className={styles.itemGap} />
+      <View className={styles.monthNav}>
+        <Text className={styles.detailTitle}>
+          Hábitos del {day} de {MONTH_NAMES[month - 1].toLowerCase()}
+        </Text>
+        <Pressable className={styles.navButton} onPress={onEdit}>
+          <Edit3 color={colors.amber700} size={18} strokeWidth={1.8} />
+        </Pressable>
+      </View>
       {habits.length === 0 ? (
         <Text className={styles.emptyText}>Sin hábitos registrados</Text>
       ) : (
@@ -263,11 +214,10 @@ function DayDetailCard({
 function DaySummaryRow({ habit }: { habit: DaySummaryHabit }) {
   return (
     <View className={styles.detailRow}>
-      {habit.completed ? (
-        <Check color={colors.sage700} size={16} />
-      ) : (
-        <X color={colors.amber400} size={16} />
-      )}
+      {habit.completed
+        ? <Check color={colors.sage700} size={16} />
+        : <X color={colors.amber400} size={16} />
+      }
       <Text className={habit.completed ? styles.detailDone : styles.detailMissed}>
         {habit.name}
       </Text>
@@ -282,11 +232,10 @@ function CategoryCard({ data }: { data: CategoryPoints[] }) {
     <View className={styles.section}>
       <Text className={styles.sectionTitle}>Distribución por Área</Text>
       <View className={styles.itemGap} />
-      {data.length > 0 ? (
-        <CategoryPie data={data} />
-      ) : (
-        <Text className={styles.emptyText}>Sin datos este mes</Text>
-      )}
+      {data.length > 0
+        ? <CategoryPie data={data} />
+        : <Text className={styles.emptyText}>Sin datos este mes</Text>
+      }
     </View>
   );
 }
@@ -303,13 +252,9 @@ function CategoryPie({ data }: { data: CategoryPoints[] }) {
   return (
     <View className={styles.chartCenter}>
       <PieChart
-        data={pieData}
-        width={CHART_WIDTH}
-        height={CHART_HEIGHT}
-        chartConfig={chartConfig}
-        accessor="population"
-        backgroundColor="transparent"
-        paddingLeft="15"
+        data={pieData} width={CHART_WIDTH} height={CHART_HEIGHT}
+        chartConfig={chartConfig} accessor="population"
+        backgroundColor="transparent" paddingLeft="15"
       />
     </View>
   );
@@ -319,7 +264,6 @@ function CategoryPie({ data }: { data: CategoryPoints[] }) {
 
 function WeeklyCard({ data }: { data: WeeklyComparison }) {
   const max = Math.max(data.thisWeek, data.lastWeek, 1);
-
   return (
     <View className={styles.section}>
       <Text className={styles.sectionTitle}>Semana vs Semana</Text>
@@ -330,16 +274,8 @@ function WeeklyCard({ data }: { data: WeeklyComparison }) {
   );
 }
 
-function ComparisonBar({
-  label,
-  value,
-  max,
-  color,
-}: {
-  label: string;
-  value: number;
-  max: number;
-  color: string;
+function ComparisonBar({ label, value, max, color }: {
+  label: string; value: number; max: number; color: string;
 }) {
   return (
     <View className={styles.compRow}>
@@ -359,15 +295,16 @@ function ComparisonBar({
 function buildCalendarCells(month: number, year: number): (number | null)[] {
   const firstDay = new Date(year, month - 1, 1);
   const daysInMonth = new Date(year, month, 0).getDate();
-
   let startDow = firstDay.getDay() - 1;
   if (startDow < 0) startDow = 6;
 
   const cells: (number | null)[] = [];
-
   for (let i = 0; i < startDow; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
-
   return cells;
+}
+
+function buildDateStr(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }

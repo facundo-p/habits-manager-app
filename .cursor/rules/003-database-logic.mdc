@@ -14,6 +14,20 @@ globs: ["src/services/db.ts", "src/services/habitService.ts", "src/types/*.ts"]
 - `base_points`: INTEGER (Default 1).
 - `default_categories`: TEXT (JSON string, ej: '["paz", "fisico"]').
 
+### Tabla: `daily_assignments` (Cápsula del Tiempo)
+- `id`: TEXT PRIMARY KEY.
+- `habit_id`: TEXT (FK -> habits.id, NULLABLE).
+- `date`: TEXT (ISO 8601 YYYY-MM-DD).
+- `snapshot_name`: TEXT (Nombre del hábito/logro al momento de crearse).
+- `snapshot_points`: INTEGER (Puntos asignados. Default 0 para espontáneos).
+- `snapshot_categories`: TEXT (JSON con las áreas).
+- `is_completed`: INTEGER (0 o 1).
+- `is_spontaneous`: INTEGER (0 o 1).
+
+### Lógica de Puntos
+- Los puntos de hábitos se guardan como INTEGER.
+- El puntaje del Mood (humor) se mantiene como REAL (por los pasos de 0.5).
+
 ### Tabla: `performed_habits` (La Instancia)
 - `id`: TEXT PRIMARY KEY (UUID).
 - `habit_id`: TEXT (FK -> habits.id ON DELETE CASCADE).
