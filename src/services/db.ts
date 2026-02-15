@@ -73,6 +73,19 @@ const SCHEMA_SQL = `
     habit_id TEXT,
     FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE SET NULL
   );
+
+  CREATE TABLE IF NOT EXISTS daily_assignments (
+    id TEXT PRIMARY KEY,
+    habit_id TEXT,
+    date TEXT NOT NULL,
+    snapshot_name TEXT NOT NULL,
+    snapshot_points INTEGER NOT NULL DEFAULT 0,
+    snapshot_categories TEXT DEFAULT '[]',
+    snapshot_frequency TEXT DEFAULT 'daily',
+    is_completed INTEGER NOT NULL DEFAULT 0,
+    is_spontaneous INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE SET NULL
+  );
 `;
 
 export async function initDatabase(): Promise<void> {
@@ -81,6 +94,15 @@ export async function initDatabase(): Promise<void> {
   await migrateSchema(db);
   await sanitizeCategories(db);
   await seedHabits(db);
+}
+
+/** Verifica si la tabla daily_assignments ya existe (para uso externo). */
+export async function hasDailyAssignmentsTable(): Promise<boolean> {
+  const db = await getDatabase();
+  const result = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='daily_assignments'",
+  );
+  return (result?.count ?? 0) > 0;
 }
 
 // ─── Migración (para DBs existentes sin is_active) ──────────────────

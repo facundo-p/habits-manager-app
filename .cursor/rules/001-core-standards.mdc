@@ -6,6 +6,7 @@ globs: ["src/**/*.ts", "src/**/*.tsx"]
 # Core Standards
 
 - **Encapsulamiento de Lógica**: Toda la lógica de negocio debe estar en `src/services/`. Los componentes solo invocan servicios.
+- **Encapsulamiento de Persistencia**: Toda la lógica de acceso a base de datos debe estar en `src/repositories/`. Los repositorios son utilizados por los servicios.
 - **Regla de las 20 líneas**: Cualquier función que supere las 20 líneas debe ser refactorizada en funciones más pequeñas.
 - **Cero Duplicación**: Antes de implementar, busca funciones similares en el proyecto. Sigue el principio DRY.
 - **Configuración**: Prohibido el uso de strings o números mágicos. Usa `src/config/constants.ts`.

@@ -33,6 +33,9 @@ export const FREQUENCY_LABELS: Record<string, string> = {
   monthly: 'Mensuales',
 };
 
+export const SPONTANEOUS_SECTION_LABEL = 'Logros del Día';
+export const SPONTANEOUS_DEFAULT_POINTS = 0;
+
 // ─── Puntos base ────────────────────────────────────────────────────
 export const BASE_POINTS_MIN = 1;
 export const BASE_POINTS_MAX = 10;
@@ -161,6 +164,13 @@ export const PROGRESS_BAR_HEIGHT = 10;
 export const ALERT_UNMARK = {
   title: '¿Eliminar registro?',
   message: '¿Deseas eliminar el registro de hoy? Esto borrará también tu reflexión y humor.',
+  confirm: 'Eliminar',
+  cancel: 'Cancelar',
+} as const;
+
+export const ALERT_UNMARK_SPONTANEOUS = {
+  title: '¿Eliminar logro?',
+  message: 'Se eliminará este registro espontáneo de hoy.',
   confirm: 'Eliminar',
   cancel: 'Cancelar',
 } as const;

@@ -2,23 +2,28 @@
  * useHabitStore.ts — Store de estado para hábitos (Zustand).
  *
  * Los componentes consumen este store; la lógica real vive en services/.
+ * La vista diaria ahora se basa en daily_assignments (DailyItem).
  */
 
 import { create } from 'zustand';
 import type {
-  Habit, DailyHabit, DailyStats, PendingReflection,
+  Habit, DailyItem, DailyStats, PendingReflection,
   HabitFormData, LibraryHabit,
 } from '../types';
 import { MOOD_DEFAULT_VALUE } from '../config/constants';
 import {
-  getHabitsForDay,
-  getDailyPointsProgress,
+  getItemsForDate,
+  getPointsForDate,
+  completeAssignment,
+  uncompleteAssignment,
+  addSpontaneous as addSpontaneousSvc,
+  removeSpontaneous,
+} from '../services/assignmentService';
+import {
   getAllHabits,
   getPerformedDescription,
-  getCompletionCounts,
-  markHabitDone,
-  unmarkHabit,
   updatePerformedDescription,
+  getCompletionCounts,
   toggleHabitActive,
   createHabit,
   updateHabit,
@@ -35,7 +40,7 @@ import {
 interface HabitState {
   // Daily
   viewDate: string | null; // null = hoy
-  dailyHabits: DailyHabit[];
+  dailyItems: DailyItem[];
   dailyStats: DailyStats;
   isLoading: boolean;
   pendingReflection: PendingReflection | null;
@@ -48,10 +53,14 @@ interface HabitState {
   resetToToday: () => void;
   setViewDate: (date: string | null) => void;
   fetchHabitsForDate: (date?: string | null) => Promise<void>;
-  toggleHabit: (habit: DailyHabit) => Promise<void>;
-  openEditReflection: (habit: DailyHabit) => Promise<void>;
+  toggleItem: (item: DailyItem) => Promise<void>;
+  openEditReflection: (item: DailyItem) => Promise<void>;
   saveReflection: (description: string, moodValue: number) => Promise<void>;
   skipReflection: () => void;
+
+  // Spontaneous
+  addSpontaneous: (name: string, categories: string[]) => Promise<void>;
+  removeSpontaneousItem: (item: DailyItem) => Promise<void>;
 
   // Library actions
   fetchLibrary: () => Promise<void>;
@@ -67,7 +76,7 @@ const EMPTY_STATS: DailyStats = { earned: 0, total: 0, percentage: 0 };
 
 export const useHabitStore = create<HabitState>((set, get) => ({
   viewDate: null,
-  dailyHabits: [],
+  dailyItems: [],
   dailyStats: EMPTY_STATS,
   isLoading: false,
   pendingReflection: null,
@@ -87,48 +96,54 @@ export const useHabitStore = create<HabitState>((set, get) => ({
   fetchHabitsForDate: async (date) => {
     set({ isLoading: true });
     const d = date ?? get().viewDate ?? undefined;
-    const [habits, stats] = await Promise.all([
-      getHabitsForDay(d ?? undefined),
-      getDailyPointsProgress(d ?? undefined),
+    const [items, stats] = await Promise.all([
+      getItemsForDate(d ?? undefined),
+      getPointsForDate(d ?? undefined),
     ]);
-    set({ dailyHabits: habits, dailyStats: stats, isLoading: false });
+    set({ dailyItems: items, dailyStats: stats, isLoading: false });
   },
 
-  toggleHabit: async (habit) => {
+  toggleItem: async (item) => {
     const datePrefix = get().viewDate ?? undefined;
 
-    if (habit.completedToday && habit.performedHabitId) {
-      await unmarkHabit(habit.performedHabitId);
-      await deleteMoodForHabit(habit.id, datePrefix);
+    if (item.isCompleted) {
+      await uncompleteAssignment(item, datePrefix);
+      if (item.habitId) {
+        await deleteMoodForHabit(item.habitId, datePrefix);
+      }
       await refreshDaily(set, get);
     } else {
-      const performedHabitId = await markHabitDone(habit, datePrefix);
+      const performedHabitId = await completeAssignment(item, datePrefix);
       await refreshDaily(set, get);
-      set({
-        pendingReflection: {
-          habit,
-          performedHabitId,
-          isEditing: false,
-          initialDescription: '',
-          initialMoodValue: MOOD_DEFAULT_VALUE,
-        },
-      });
+
+      // Abrir modal de reflexión solo para hábitos regulares
+      if (item.habitId && performedHabitId) {
+        set({
+          pendingReflection: {
+            item,
+            performedHabitId,
+            isEditing: false,
+            initialDescription: '',
+            initialMoodValue: MOOD_DEFAULT_VALUE,
+          },
+        });
+      }
     }
   },
 
-  openEditReflection: async (habit) => {
-    if (!habit.performedHabitId) return;
+  openEditReflection: async (item) => {
+    if (!item.performedHabitId || !item.habitId) return;
     const datePrefix = get().viewDate ?? undefined;
 
     const [description, moodValue] = await Promise.all([
-      getPerformedDescription(habit.performedHabitId),
-      getMoodForHabit(habit.id, datePrefix),
+      getPerformedDescription(item.performedHabitId),
+      getMoodForHabit(item.habitId, datePrefix),
     ]);
 
     set({
       pendingReflection: {
-        habit,
-        performedHabitId: habit.performedHabitId,
+        item,
+        performedHabitId: item.performedHabitId,
         isEditing: true,
         initialDescription: description,
         initialMoodValue: moodValue ?? MOOD_DEFAULT_VALUE,
@@ -140,20 +155,36 @@ export const useHabitStore = create<HabitState>((set, get) => ({
     const { pendingReflection, viewDate } = get();
     if (!pendingReflection) return;
 
-    const { habit, performedHabitId, isEditing } = pendingReflection;
+    const { item, performedHabitId, isEditing } = pendingReflection;
     const datePrefix = viewDate ?? undefined;
 
     await updatePerformedDescription(performedHabitId, description);
 
-    if (isEditing) {
-      await deleteMoodForHabit(habit.id, datePrefix);
+    if (isEditing && item.habitId) {
+      await deleteMoodForHabit(item.habitId, datePrefix);
     }
 
-    await createMoodEntry(moodValue, description, habit.id, datePrefix);
+    if (item.habitId) {
+      await createMoodEntry(moodValue, description, item.habitId, datePrefix);
+    }
+
     set({ pendingReflection: null });
   },
 
   skipReflection: () => set({ pendingReflection: null }),
+
+  // ─── Spontaneous actions ────────────────────────────────────────
+
+  addSpontaneous: async (name, categories) => {
+    const datePrefix = get().viewDate ?? undefined;
+    await addSpontaneousSvc(name, categories, datePrefix);
+    await refreshDaily(set, get);
+  },
+
+  removeSpontaneousItem: async (item) => {
+    await removeSpontaneous(item.assignmentId);
+    await refreshDaily(set, get);
+  },
 
   // ─── Library actions ────────────────────────────────────────────
 
@@ -205,11 +236,11 @@ async function refreshDaily(
   get: () => HabitState,
 ): Promise<void> {
   const d = get().viewDate ?? undefined;
-  const [habits, stats] = await Promise.all([
-    getHabitsForDay(d),
-    getDailyPointsProgress(d),
+  const [items, stats] = await Promise.all([
+    getItemsForDate(d),
+    getPointsForDate(d),
   ]);
-  set({ dailyHabits: habits, dailyStats: stats });
+  set({ dailyItems: items, dailyStats: stats });
 }
 
 async function refreshAll(
@@ -217,12 +248,12 @@ async function refreshAll(
   get: () => HabitState,
 ): Promise<void> {
   const d = get().viewDate ?? undefined;
-  const [dailyHabits, stats, allHabits, counts] = await Promise.all([
-    getHabitsForDay(d),
-    getDailyPointsProgress(d),
+  const [dailyItems, stats, allHabits, counts] = await Promise.all([
+    getItemsForDate(d),
+    getPointsForDate(d),
     getAllHabits(),
     getCompletionCounts(),
   ]);
   const libraryHabits = enrichWithCounts(allHabits, counts);
-  set({ dailyHabits, dailyStats: stats, libraryHabits });
+  set({ dailyItems, dailyStats: stats, libraryHabits });
 }

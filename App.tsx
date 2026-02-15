@@ -20,6 +20,7 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { ROUTES } from './src/config/constants';
 import { tabBarTheme, iconDefaults, colors } from './src/styles/ui.styles';
 import { initDatabase } from './src/services/db';
+import { checkAndBackfillHistory } from './src/services/assignmentService';
 import { useHabitStore } from './src/store/useHabitStore';
 import type { RootStackParamList, RootTabParamList } from './src/types';
 
@@ -136,7 +137,8 @@ export default function App() {
 
   useEffect(() => {
     initDatabase()
-      .then(() => console.log('DB inicializada correctamente'))
+      .then(() => checkAndBackfillHistory())
+      .then(() => console.log('DB inicializada y backfill completado'))
       .catch((err) => console.error('Error inicializando DB:', err));
   }, []);
 
