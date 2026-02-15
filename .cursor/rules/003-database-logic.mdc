@@ -1,14 +1,35 @@
 ---
-description: Reglas para la gestión de SQLite y el modelo de datos Habit/PerformedHabit.
+description: Esquema detallado de SQLite y reglas de integridad para hábitos, registros y humor.
 globs: ["src/services/db.ts", "src/services/habitService.ts", "src/types/*.ts"]
 ---
 
-# Database & Domain Logic
+# Database Schema & Business Logic
 
-- **SQLite**: Usa `expo-sqlite` de forma asíncrona.
-- **Entidades**: 
-  - `Habit`: El molde (frecuencia, puntos base).
-  - `PerformedHabit`: La instancia (registro diario, descripción, puntos ganados).
-  - `MoodEntry`: Registro de humor (valor 1-10, step 0.5, timestamp).
-- **Consistencia**: Los puntos diarios se calculan sumando `points_earned` de la tabla `performed_habits`.
-- **Aislamiento**: Solo los archivos en `src/services/` pueden realizar consultas SQL directamente.
+## 1. Entidades y Tablas (SQLite)
+
+### Tabla: `habits` (El Molde)
+- `id`: TEXT PRIMARY KEY (UUID).
+- `name`: TEXT NOT NULL.
+- `frequency`: TEXT (Valores: 'daily', 'weekly', 'monthly').
+- `base_points`: INTEGER (Default 1).
+- `default_categories`: TEXT (JSON string, ej: '["paz", "fisico"]').
+
+### Tabla: `performed_habits` (La Instancia)
+- `id`: TEXT PRIMARY KEY (UUID).
+- `habit_id`: TEXT (FK -> habits.id ON DELETE CASCADE).
+- `timestamp`: TEXT NOT NULL (ISO 8601 YYYY-MM-DD HH:MM:SS).
+- `points_earned`: REAL NOT NULL.
+- `habit_description`: TEXT (Notas/reflexión sobre el hábito).
+- `categories_used`: TEXT (JSON string, permite categorías personalizadas para este registro).
+
+### Tabla: `mood_entries` (Registros de Humor)
+- `id`: TEXT PRIMARY KEY (UUID).
+- `value`: REAL NOT NULL (Rango 1.0 - 10.0, step 0.5).
+- `description`: TEXT (¿Qué te hizo sentir así?).
+- `timestamp`: TEXT NOT NULL (ISO 8601).
+- `habit_id`: TEXT (FK opcional -> habits.id ON DELETE SET NULL).
+
+## 2. Reglas de Negocio
+- **Cálculo de Puntos**: Los puntos se suman desde `performed_habits`. El "Total del Día" es la suma de `points_earned` donde el timestamp coincida con la fecha actual.
+- **Persistencia**: Toda operación de escritura (INSERT/UPDATE) debe ser asíncrona usando `db.runAsync` o `db.executeAsync`.
+- **Independencia**: Modificar las categorías en `performed_habits` NO debe afectar al `habit` original.

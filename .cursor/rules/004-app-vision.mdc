@@ -1,15 +1,24 @@
 ---
-description: Reglas sobre la estética y el comportamiento de usuario para mantener la consistencia "Cozy".
-globs: ["**/*"]
+description: Reglas sobre la identidad visual "Cozy", el componente de fondo global y la estética de cuaderno.
+globs: ["src/components/layout/**/*", "src/screens/**/*", "src/styles/ui.styles.ts"]
 ---
 
-# App Vision: CozyHabit
+# App Vision: CozyHabit & Background Implementation
 
-- **Estética**: Acogedora, cálida, tipo "Notebook" (cuaderno).
-- **UI Key Elements**:
-  - Fondo: Imagen con `BlurView` claro.
-  - Hoja del Día: Estética de papel rayado, checkboxes que tachan el texto.
-  - Mood Indicator: Slider de 1 a 10 con incremento de 0.5.
-- **Comportamiento**: 
-  - Al marcar un hábito como hecho, se dispara el modal de reflexión (habitDescription/mood) de forma fluida.
-  - Los hábitos semanales/mensuales no deben penalizar el porcentaje de éxito diario.
+## 1. El Fondo "Cozy" (Global Layout)
+- **Implementación**: Se debe usar un componente envolvente llamado `AppBackground`.
+- **Estructura**:
+  1. `ImageBackground`: Usa una imagen cálida/orgánica (ubicada en `assets/images/background.jpg`).
+  2. `BlurView`: Capa superior con `intensity={20}` y `tint="light"` (usando `expo-blur`).
+  3. `SafeAreaView`: Para contener la navegación y el contenido.
+- **Regla**: Ninguna pantalla debe definir su propio fondo; todas deben ser transparentes para mostrar el fondo global.
+
+## 2. Estética "Notebook" (Cuaderno)
+- **Papel**: Los contenedores principales deben usar la clase `notebookPaper` de `ui.styles.ts` (blanco hueso, sombra suave, borde izquierdo simulando el margen de un cuaderno).
+- **Checklist**: Al marcar un hábito, el texto debe aplicar un estilo `line-through` con un color sepia suave, simulando un tachado a mano.
+- **Iconografía**: Usa `lucide-react-native` con trazos finos y colores tierra.
+
+## 3. Mood Tracker UI
+- **Control**: Slider horizontal con valores de 1.0 a 10.0.
+- **Snap**: Debe permitir incrementos de 0.5.
+- **Feedback**: El valor seleccionado debe mostrarse con una tipografía Serif cálida.
