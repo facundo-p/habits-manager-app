@@ -107,8 +107,23 @@ export interface HabitArea {
 
 // ─── Navegación ─────────────────────────────────────────────────────
 
+export type RootStackParamList = {
+  Main: undefined;
+  Ajustes: undefined;
+};
+
 export type RootTabParamList = {
   Hoy: { date?: string } | undefined;
   Biblioteca: undefined;
   Progreso: undefined;
 };
+
+// ─── Backup ─────────────────────────────────────────────────────────
+
+export interface BackupData {
+  version: number;
+  exportedAt: string;
+  habits: Habit[];
+  performed_habits: PerformedHabit[];
+  mood_entries: MoodEntry[];
+}

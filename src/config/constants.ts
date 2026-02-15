@@ -205,4 +205,32 @@ export const ROUTES = {
   DAILY_SHEET: 'Hoy',
   HABIT_LIBRARY: 'Biblioteca',
   STATS: 'Progreso',
+  SETTINGS: 'Ajustes',
+  MAIN: 'Main',
+} as const;
+
+// ─── Backup ─────────────────────────────────────────────────────────
+export const BACKUP_VERSION = 1;
+export const BACKUP_FILENAME = 'cozy_habit_backup.json';
+
+export const ALERT_IMPORT = {
+  title: '¿Importar datos?',
+  message: 'Esto reemplazará TODOS tus datos actuales (hábitos, registros y humor). Esta acción no se puede deshacer.',
+  confirm: 'Importar',
+  cancel: 'Cancelar',
+} as const;
+
+export const ALERT_IMPORT_SUCCESS = {
+  title: 'Importación exitosa',
+  message: 'Tus datos han sido restaurados correctamente.',
+} as const;
+
+export const ALERT_IMPORT_ERROR = {
+  title: 'Error de importación',
+  message: 'El archivo no tiene un formato válido de respaldo CozyHabit.',
+} as const;
+
+export const ALERT_EXPORT_ERROR = {
+  title: 'Error de exportación',
+  message: 'No se pudo exportar el respaldo. Intenta nuevamente.',
 } as const;
