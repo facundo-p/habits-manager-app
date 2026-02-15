@@ -8,11 +8,12 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { PieChart } from 'react-native-chart-kit';
-import { ChevronLeft, ChevronRight, Check, X, Edit3 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Check, X, Edit3, Star } from 'lucide-react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
-  MONTH_NAMES, WEEKDAY_LABELS, CATEGORY_LABELS, CATEGORY_CHART_COLORS, ROUTES,
+  MONTH_NAMES, WEEKDAY_LABELS, CATEGORY_LABELS, CATEGORY_CHART_COLORS,
+  FREQUENCY_LABELS, ROUTES,
 } from '../config/constants';
 import {
   getMonthlyHeatmapData, getCategoryDistribution, getWeeklyComparison, getHabitsForDate,
@@ -192,6 +193,9 @@ function HeatmapCell({ day, percentage, isSelected, onPress }: {
 function DayDetailCard({ day, month, habits, onEdit }: {
   day: number; month: number; habits: DaySummaryHabit[]; onEdit: () => void;
 }) {
+  const regular = habits.filter((h) => !h.isSpontaneous);
+  const spontaneous = habits.filter((h) => h.isSpontaneous);
+
   return (
     <View className={styles.section}>
       <View className={styles.monthNav}>
@@ -202,16 +206,26 @@ function DayDetailCard({ day, month, habits, onEdit }: {
           <Edit3 color={colors.amber700} size={18} strokeWidth={1.8} />
         </Pressable>
       </View>
-      {habits.length === 0 ? (
-        <Text className={styles.emptyText}>Sin hábitos registrados</Text>
+      {regular.length === 0 && spontaneous.length === 0 ? (
+        <Text className={styles.emptyText}>Sin registros para este día</Text>
       ) : (
-        habits.map((h) => <DaySummaryRow key={h.name} habit={h} />)
+        <>
+          {regular.map((h, i) => <DaySummaryRow key={`r-${i}`} habit={h} />)}
+          {spontaneous.length > 0 && (
+            <>
+              <View className={styles.spontaneousDivider} />
+              <Text className={styles.spontaneousLabel}>Logros del Día</Text>
+              {spontaneous.map((h, i) => <SpontaneousSummaryRow key={`s-${i}`} habit={h} />)}
+            </>
+          )}
+        </>
       )}
     </View>
   );
 }
 
 function DaySummaryRow({ habit }: { habit: DaySummaryHabit }) {
+  const freqLabel = FREQUENCY_LABELS[habit.frequency] ?? '';
   return (
     <View className={styles.detailRow}>
       {habit.completed
@@ -221,6 +235,21 @@ function DaySummaryRow({ habit }: { habit: DaySummaryHabit }) {
       <Text className={habit.completed ? styles.detailDone : styles.detailMissed}>
         {habit.name}
       </Text>
+      {habit.points > 0 && (
+        <Text className={styles.detailPoints}>{habit.points} pts</Text>
+      )}
+      {freqLabel ? (
+        <Text className={styles.detailFreq}>{freqLabel}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+function SpontaneousSummaryRow({ habit }: { habit: DaySummaryHabit }) {
+  return (
+    <View className={styles.detailRow}>
+      <Star color={colors.amber500} size={14} fill={colors.amber500} />
+      <Text className={styles.detailSpontaneous}>{habit.name}</Text>
     </View>
   );
 }

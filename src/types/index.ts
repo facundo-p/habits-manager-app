@@ -110,6 +110,9 @@ export interface LibraryHabit extends Habit {
 export interface DaySummaryHabit {
   name: string;
   completed: boolean;
+  isSpontaneous: boolean;
+  points: number;
+  frequency: string;
 }
 
 export interface CategoryPoints {

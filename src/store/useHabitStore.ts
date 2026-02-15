@@ -18,6 +18,8 @@ import {
   uncompleteAssignment,
   addSpontaneous as addSpontaneousSvc,
   removeSpontaneous,
+  addAssignmentForHabit,
+  removeAssignmentForHabit,
 } from '../services/assignmentService';
 import {
   getAllHabits,
@@ -199,7 +201,8 @@ export const useHabitStore = create<HabitState>((set, get) => ({
   },
 
   addHabit: async (data) => {
-    await createHabit(data.name, data.frequency, data.basePoints, data.categories);
+    const habitId = await createHabit(data.name, data.frequency, data.basePoints, data.categories);
+    await addAssignmentForHabit(habitId);
     await refreshAll(set, get);
   },
 
@@ -215,6 +218,11 @@ export const useHabitStore = create<HabitState>((set, get) => ({
 
   toggleActive: async (id, isActive) => {
     await toggleHabitActive(id, isActive);
+    if (isActive) {
+      await addAssignmentForHabit(id);
+    } else {
+      await removeAssignmentForHabit(id);
+    }
     await refreshAll(set, get);
   },
 }));

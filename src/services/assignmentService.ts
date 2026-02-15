@@ -100,6 +100,44 @@ export async function removeSpontaneous(
   await assignmentRepo.deleteById(assignmentId);
 }
 
+// ─── Sincronización con la Biblioteca ────────────────────────────────
+
+/**
+ * Agrega una asignación para un hábito en la fecha dada (solo si no existe).
+ * Se usa al crear o re-activar un hábito desde la Biblioteca.
+ * Solo afecta al día de hoy — nunca toca días pasados.
+ */
+export async function addAssignmentForHabit(
+  habitId: string,
+  datePrefix?: string,
+): Promise<void> {
+  const day = datePrefix ?? getTodayPrefix();
+  const existing = await assignmentRepo.findByHabitAndDate(habitId, day);
+  if (existing) return;
+
+  const habit = await habitRepo.findById(habitId);
+  if (!habit) return;
+
+  await assignmentRepo.insert(
+    habit.id, day, habit.name, habit.base_points,
+    habit.default_categories, habit.frequency, 0, 0,
+  );
+}
+
+/**
+ * Elimina la asignación no completada de un hábito en la fecha dada.
+ * Se usa al archivar un hábito desde la Biblioteca.
+ * Solo afecta al día de hoy — nunca toca días pasados.
+ * Si el hábito ya fue completado hoy, su asignación se preserva.
+ */
+export async function removeAssignmentForHabit(
+  habitId: string,
+  datePrefix?: string,
+): Promise<void> {
+  const day = datePrefix ?? getTodayPrefix();
+  await assignmentRepo.deleteUncompletedByHabitAndDate(habitId, day);
+}
+
 // ─── Backfill (integridad histórica) ────────────────────────────────
 
 /**
@@ -136,7 +174,7 @@ export async function checkAndBackfillHistory(): Promise<void> {
  * Usa los hábitos activos actuales como base del snapshot.
  * Cruza con performed_habits existentes para marcar completados.
  */
-async function ensureAssignmentsForDate(datePrefix: string): Promise<void> {
+export async function ensureAssignmentsForDate(datePrefix: string): Promise<void> {
   const existing = await assignmentRepo.countByDate(datePrefix);
   if (existing > 0) return;
 

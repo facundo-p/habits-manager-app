@@ -39,6 +39,12 @@ const SQL_SUM_EARNED_BY_DATE =
 const SQL_EARNED_BY_DAY_IN_MONTH =
   "SELECT SUBSTR(date, 9, 2) as day, SUM(CASE WHEN is_completed = 1 THEN snapshot_points ELSE 0 END) as earned, SUM(snapshot_points) as total FROM daily_assignments WHERE date LIKE ? || '%' GROUP BY day";
 
+const SQL_FIND_BY_HABIT_AND_DATE =
+  'SELECT * FROM daily_assignments WHERE habit_id = ? AND date = ? LIMIT 1';
+
+const SQL_DELETE_UNCOMPLETED_BY_HABIT_AND_DATE =
+  'DELETE FROM daily_assignments WHERE habit_id = ? AND date = ? AND is_completed = 0';
+
 // ─── Consultas ──────────────────────────────────────────────────────
 
 /** Todas las asignaciones para una fecha (YYYY-MM-DD). */
@@ -92,6 +98,15 @@ export async function sumByDayInMonth(
   );
 }
 
+/** Busca una asignación por habit_id y fecha. */
+export async function findByHabitAndDate(
+  habitId: string,
+  datePrefix: string,
+): Promise<DailyAssignment | null> {
+  const db = await getDatabase();
+  return db.getFirstAsync<DailyAssignment>(SQL_FIND_BY_HABIT_AND_DATE, [habitId, datePrefix]);
+}
+
 // ─── Mutaciones ─────────────────────────────────────────────────────
 
 /** Inserta una nueva asignación. Retorna el ID generado. */
@@ -124,4 +139,13 @@ export async function setCompleted(id: string, completed: boolean): Promise<void
 export async function deleteById(id: string): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(SQL_DELETE, [id]);
+}
+
+/** Elimina la asignación no completada de un hábito en una fecha (solo hoy). */
+export async function deleteUncompletedByHabitAndDate(
+  habitId: string,
+  datePrefix: string,
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(SQL_DELETE_UNCOMPLETED_BY_HABIT_AND_DATE, [habitId, datePrefix]);
 }

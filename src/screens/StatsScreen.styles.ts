@@ -2,7 +2,8 @@
  * StatsScreen.styles.ts — Estilos de la pantalla "Progreso".
  *
  * Incluye NativeWind classes, StyleSheet nativo para el heatmap/charts,
- * y funciones dinámicas para colores y anchos de barra.
+ * funciones dinámicas para colores y anchos de barra,
+ * y estilos para ítems espontáneos en el detalle del día.
  */
 
 import { Dimensions, StyleSheet, ViewStyle } from 'react-native';
@@ -56,9 +57,16 @@ export const styles = {
   // ─── Day Detail ─────────────────────────────────────────────────
   detailTitle: text.body,
   detailRow: 'flex-row items-center gap-2 py-1',
-  detailDone: 'text-sm font-sans text-green-700',
-  detailMissed: 'text-sm font-sans text-amber-400',
+  detailDone: 'text-sm font-sans text-green-700 flex-1',
+  detailMissed: 'text-sm font-sans text-amber-400 flex-1',
   detailName: text.caption,
+  detailPoints: 'text-xs font-sans text-amber-500',
+  detailFreq: 'text-xs font-sans text-amber-400',
+
+  // ─── Spontaneous items in Day Detail ────────────────────────────
+  spontaneousDivider: 'border-t border-amber-200/50 mt-2 mb-1',
+  spontaneousLabel: 'text-xs font-semibold font-sans text-amber-600 mb-1',
+  detailSpontaneous: 'text-sm font-sans text-amber-700 italic flex-1',
 
   // ─── Pie Chart ──────────────────────────────────────────────────
   chartCenter: 'items-center',

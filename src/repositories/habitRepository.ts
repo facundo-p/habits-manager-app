@@ -33,6 +33,8 @@ const SQL_DELETE = 'DELETE FROM habits WHERE id = ?';
 
 const SQL_SET_ACTIVE = 'UPDATE habits SET is_active = ? WHERE id = ?';
 
+const SQL_FIND_BY_ID = 'SELECT * FROM habits WHERE id = ?';
+
 // ─── Consultas ──────────────────────────────────────────────────────
 
 /** Todos los hábitos activos. */
@@ -58,6 +60,12 @@ export async function sumPointsByFrequency(freq: string): Promise<number> {
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ total: number }>(SQL_SUM_BY_FREQ, [freq]);
   return row?.total ?? 0;
+}
+
+/** Busca un hábito por ID. */
+export async function findById(id: string): Promise<Habit | null> {
+  const db = await getDatabase();
+  return db.getFirstAsync<Habit>(SQL_FIND_BY_ID, [id]);
 }
 
 /** Suma de base_points de hábitos diarios activos. */
