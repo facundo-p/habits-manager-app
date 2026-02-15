@@ -51,7 +51,7 @@ export function HabitFormModal({
   }
 
   return (
-    <BottomSheet visible={visible}>
+    <BottomSheet visible={visible} onClose={onCancel}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text className={styles.title}>
           {editingHabit ? 'Editar Hábito' : 'Nuevo Hábito'}

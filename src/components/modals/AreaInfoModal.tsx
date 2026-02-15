@@ -34,7 +34,7 @@ export function AreaInfoModal({ visible, area, onClose }: AreaInfoModalProps) {
   if (!area) return null;
 
   return (
-    <BottomSheet visible={visible}>
+    <BottomSheet visible={visible} onClose={onClose}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <AreaHeader area={area} />
         <Text className={styles.description}>{area.description}</Text>

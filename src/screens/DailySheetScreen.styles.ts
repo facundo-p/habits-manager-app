@@ -2,26 +2,24 @@
  * DailySheetScreen.styles.ts — Estilos de la pantalla "Hoy".
  */
 
-import { ViewStyle } from 'react-native';
+import { StyleSheet, ViewStyle } from 'react-native';
 import {
-  text, layout, card, checkbox, spacing, progress, section, badge,
+  text, layout, checkbox, spacing, progress, section, badge, button, colors,
 } from '../styles/ui.styles';
 
 export const styles = {
-  /** Contenedor principal transparente con padding */
   container: layout.transparentPadded,
-
-  /** Título de la pantalla */
   title: text.titleLarge,
-
-  /** Subtítulo con la fecha */
   dateCaption: text.caption,
-
-  /** Label modo histórico */
   editingLabel: text.editingLabel,
-
-  /** Separador debajo del título */
   titleGap: spacing.sectionGap,
+
+  // ─── Header histórico ──────────────────────────────────────────
+  /** Fila del header: título + botón volver */
+  headerRow: 'flex-row items-center justify-between',
+  /** Botón "Guardar y Volver" */
+  goBackButton: button.secondary,
+  goBackText: button.secondaryText,
 
   // ─── Progress header (global) ────────────────────────────────────
   progressWrapper: progress.wrapper,
@@ -44,37 +42,34 @@ export const styles = {
   miniProgressFill: progress.miniFill,
 
   // ─── Habit list ─────────────────────────────────────────────────
-  paper: card.notebookPaper,
-
-  /** Fila de hábito */
   habitRow: 'flex-row items-start gap-3 py-3',
-
-  /** Checkbox sin marcar */
   checkboxUnchecked: checkbox.box,
-  /** Checkbox marcado */
   checkboxChecked: checkbox.checked,
-
-  /** Contenedor de info del hábito (nombre + badges) */
   habitContent: 'flex-1',
-
-  /** Texto del hábito pendiente */
   habitText: text.body,
-  /** Texto del hábito completado (tachado sepia) */
   habitTextCompleted: text.textCompleted,
 
   // ─── Badges de área ─────────────────────────────────────────────
   badgeRow: badge.row,
   badgeText: badge.text,
 
-  /** Línea separadora entre hábitos */
-  separator: card.lined,
-
-  /** Contenedor del loading */
+  separator: 'border-b border-amber-100/60',
   loading: layout.centered,
-
-  /** Texto cuando no hay hábitos */
   emptyText: text.caption,
 } as const;
+
+// ─── Native styles (para badges dinámicos y barras) ────────────────
+
+export const nativeStyles = StyleSheet.create({
+  /** Badge individual de área (color dinámico via style prop) */
+  badgeContainer: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 6,
+    marginTop: 4,
+  },
+});
 
 /** Ancho dinámico de la barra de progreso global. */
 export function progressFillWidth(percentage: number): ViewStyle {
@@ -85,3 +80,5 @@ export function progressFillWidth(percentage: number): ViewStyle {
 export function miniProgressFillWidth(percentage: number): ViewStyle {
   return { width: `${Math.min(percentage, 100)}%` };
 }
+
+export { colors };

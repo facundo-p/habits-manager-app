@@ -3,22 +3,32 @@
  *
  * Soporta 3 secciones (Diarios/Semanales/Mensuales),
  * badges de área en cada hábito, y barras de progreso por sección.
+ * Usa NotebookPaper con efecto anillado espiral.
+ *
+ * viewDate del store es la única fuente de verdad para la fecha.
+ * Los route params solo se usan una vez (al llegar de Stats) y se limpian.
+ * useFocusEffect garantiza recarga al ganar foco con la fecha correcta.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, Pressable, ActivityIndicator, ScrollView, Alert } from 'react-native';
 import { Check } from 'lucide-react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useHabitStore } from '../store/useHabitStore';
 import { useFeedback } from '../hooks/useFeedback';
-import { colors } from '../styles/ui.styles';
 import {
-  CHECKBOX_ICON_SIZE, ALERT_UNMARK, FREQUENCY_LABELS, AREAS_MAP, MONTH_NAMES,
+  CHECKBOX_ICON_SIZE, ALERT_UNMARK, FREQUENCY_LABELS, AREAS_MAP, MONTH_NAMES, ROUTES,
 } from '../config/constants';
+import { NotebookPaper } from '../components/layout/NotebookPaper';
 import { ReflectionModal } from '../components/modals/ReflectionModal';
 import { AreaInfoModal } from '../components/modals/AreaInfoModal';
-import { styles, progressFillWidth, miniProgressFillWidth } from './DailySheetScreen.styles';
-import type { DailyHabit, DailyStats, HabitArea, FrequencyGroup } from '../types';
+import {
+  styles, nativeStyles, miniProgressFillWidth, colors,
+} from './DailySheetScreen.styles';
+import type { DailyHabit, DailyStats, HabitArea, FrequencyGroup, RootTabParamList } from '../types';
+
+type DailyNavProp = BottomTabNavigationProp<RootTabParamList, 'Hoy'>;
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -64,19 +74,6 @@ function confirmUnmark(habit: DailyHabit, toggle: (h: DailyHabit) => Promise<voi
 
 // ─── Sub-componentes ────────────────────────────────────────────────
 
-function ProgressHeader({ stats }: { stats: DailyStats }) {
-  return (
-    <View className={styles.progressWrapper}>
-      <View className={styles.progressRow}>
-        <Text className={styles.progressEarned}>{stats.earned}</Text>
-        <Text className={styles.progressTotal}>/ {stats.total} puntos</Text>
-      </View>
-      <View className={styles.progressTrack}>
-        <View className={styles.progressFill} style={progressFillWidth(stats.percentage)} />
-      </View>
-    </View>
-  );
-}
 
 function MiniProgressBar({ stats }: { stats: DailyStats }) {
   return (
@@ -92,19 +89,12 @@ function MiniProgressBar({ stats }: { stats: DailyStats }) {
   );
 }
 
-function AreaBadge({
-  areaId,
-  onPress,
-}: {
-  areaId: string;
-  onPress: (id: string) => void;
-}) {
+function AreaBadge({ areaId, onPress }: { areaId: string; onPress: (id: string) => void }) {
   const area = AREAS_MAP[areaId];
   if (!area) return null;
   return (
     <Pressable
-      className={styles.badgeRow ? undefined : undefined}
-      style={{ backgroundColor: area.color, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, marginRight: 6, marginTop: 4 }}
+      style={[nativeStyles.badgeContainer, { backgroundColor: area.color }]}
       onPress={() => onPress(areaId)}
     >
       <Text className={styles.badgeText}>{area.label}</Text>
@@ -123,15 +113,9 @@ function AreaBadges({ categories, onBadgePress }: { categories: string; onBadgeP
 }
 
 function HabitRow({
-  habit,
-  onPress,
-  onLongPress,
-  onBadgePress,
+  habit, onPress, onLongPress, onBadgePress,
 }: {
-  habit: DailyHabit;
-  onPress: () => void;
-  onLongPress: () => void;
-  onBadgePress: (id: string) => void;
+  habit: DailyHabit; onPress: () => void; onLongPress: () => void; onBadgePress: (id: string) => void;
 }) {
   const checkStyle = habit.completedToday ? styles.checkboxChecked : styles.checkboxUnchecked;
   const textStyle = habit.completedToday ? styles.habitTextCompleted : styles.habitText;
@@ -150,14 +134,10 @@ function HabitRow({
 }
 
 function Separator() { return <View className={styles.separator} />; }
-
 function EmptyList() { return <Text className={styles.emptyText}>No hay hábitos registrados</Text>; }
 
 function FrequencySection({
-  group,
-  onPress,
-  onLongPress,
-  onBadgePress,
+  group, onPress, onLongPress, onBadgePress,
 }: {
   group: FrequencyGroup;
   onPress: (h: DailyHabit) => void;
@@ -179,8 +159,7 @@ function FrequencySection({
   return (
     <View className={styles.sectionContainer}>
       <Text className={styles.sectionTitle}>{FREQUENCY_LABELS[group.frequency]}</Text>
-      <MiniProgressBar stats={group.stats} />
-      <View className={styles.paper}>
+      <NotebookPaper>
         <FlatList
           data={group.habits}
           keyExtractor={(item) => item.id}
@@ -189,7 +168,8 @@ function FrequencySection({
           scrollEnabled={false}
           ListEmptyComponent={EmptyList}
         />
-      </View>
+      </NotebookPaper>
+      <MiniProgressBar stats={group.stats} />
     </View>
   );
 }
@@ -198,25 +178,32 @@ function FrequencySection({
 
 export function DailySheetScreen() {
   const route = useRoute();
-  const targetDate = (route.params as { date?: string } | undefined)?.date ?? null;
+  const navigation = useNavigation<DailyNavProp>();
+  const routeDate = (route.params as { date?: string } | undefined)?.date ?? null;
 
   const {
     dailyHabits, dailyStats, isLoading, pendingReflection, viewDate,
-    setViewDate, fetchHabitsForDate,
+    resetToToday, setViewDate, fetchHabitsForDate,
     toggleHabit, openEditReflection, saveReflection, skipReflection,
   } = useHabitStore();
 
   const { triggerSuccess } = useFeedback();
   const [selectedArea, setSelectedArea] = useState<HabitArea | null>(null);
 
-  // Sincronizar viewDate con route params
+  // ── 1. Consumir el route param una sola vez y limpiarlo ──────────
   useEffect(() => {
-    setViewDate(targetDate);
-  }, [targetDate, setViewDate]);
+    if (routeDate) {
+      setViewDate(routeDate);
+      navigation.setParams({ date: undefined } as any);
+    }
+  }, [routeDate, setViewDate, navigation]);
 
-  useEffect(() => {
-    fetchHabitsForDate(viewDate);
-  }, [viewDate, fetchHabitsForDate]);
+  // ── 2. Recargar hábitos al ganar foco o cuando viewDate cambie ───
+  useFocusEffect(
+    useCallback(() => {
+      fetchHabitsForDate(viewDate);
+    }, [viewDate, fetchHabitsForDate]),
+  );
 
   const handlePress = useCallback(
     (habit: DailyHabit) => {
@@ -237,11 +224,20 @@ export function DailySheetScreen() {
   );
 
   const handleBadgePress = useCallback((areaId: string) => {
-    const area = AREAS_MAP[areaId] ?? null;
-    setSelectedArea(area);
+    setSelectedArea(AREAS_MAP[areaId] ?? null);
   }, []);
 
+  // ── 3. Guardar y Volver: dismiss reflection + reset + ir a Stats ──
+  const handleGoBack = useCallback(() => {
+    skipReflection();
+    resetToToday();
+    navigation.navigate(ROUTES.STATS as 'Progreso');
+  }, [skipReflection, resetToToday, navigation]);
+
   const groups = groupByFrequency(dailyHabits);
+
+  // viewDate del store = fuente de verdad (no route params)
+  const isHistoric = !!viewDate;
 
   if (isLoading && dailyHabits.length === 0) {
     return (
@@ -251,20 +247,15 @@ export function DailySheetScreen() {
     );
   }
 
-  const isHistoric = !!targetDate;
-  const title = isHistoric ? 'Editando' : 'Hoy';
-  const subtitle = isHistoric
-    ? formatHistoricDate(targetDate!)
-    : formatTodayDate();
-
   return (
     <ScrollView className={styles.container}>
-      <Text className={styles.title}>{title}</Text>
-      {isHistoric && <Text className={styles.editingLabel}>{subtitle}</Text>}
-      {!isHistoric && <Text className={styles.dateCaption}>{subtitle}</Text>}
+      {isHistoric ? (
+        <HistoricHeader date={viewDate!} onGoBack={handleGoBack} />
+      ) : (
+        <TodayHeader />
+      )}
 
       <View className={styles.titleGap} />
-      <ProgressHeader stats={dailyStats} />
 
       {groups.map((g) => (
         <FrequencySection
@@ -293,5 +284,32 @@ export function DailySheetScreen() {
         onClose={() => setSelectedArea(null)}
       />
     </ScrollView>
+  );
+}
+
+// ─── Headers ────────────────────────────────────────────────────────
+
+function TodayHeader() {
+  return (
+    <>
+      <Text className={styles.title}>Hoy</Text>
+      <Text className={styles.dateCaption}>{formatTodayDate()}</Text>
+    </>
+  );
+}
+
+function HistoricHeader({ date, onGoBack }: { date: string; onGoBack: () => void }) {
+  return (
+    <>
+      <View className={styles.headerRow}>
+        <View>
+          <Text className={styles.title}>Editando</Text>
+          <Text className={styles.editingLabel}>{formatHistoricDate(date)}</Text>
+        </View>
+        <Pressable className={styles.goBackButton} onPress={onGoBack}>
+          <Text className={styles.goBackText}>Guardar y Volver</Text>
+        </Pressable>
+      </View>
+    </>
   );
 }

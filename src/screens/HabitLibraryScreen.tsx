@@ -1,47 +1,45 @@
 /**
  * HabitLibraryScreen — Pantalla de biblioteca de hábitos.
  *
- * Muestra todos los hábitos "molde" con toggle de visibilidad,
- * conteo de completados y opciones de edición/eliminación.
+ * Dividida en "Hábitos Activos" y "Hábitos Archivados".
+ * Los archivados se muestran al final con opacidad del 50%.
+ * Usa NotebookPaper con efecto de anillado espiral.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { View, Text, FlatList, Pressable, ActivityIndicator, ScrollView, Alert } from 'react-native';
 import { Trash2, Plus, Eye, EyeOff } from 'lucide-react-native';
 import { useHabitStore } from '../store/useHabitStore';
 import { ALERT_DELETE_HABIT, FREQUENCY_LABELS, CATEGORY_LABELS } from '../config/constants';
+import { NotebookPaper } from '../components/layout/NotebookPaper';
 import { HabitFormModal } from '../components/modals/HabitFormModal';
-import { styles, colors } from './HabitLibraryScreen.styles';
+import { styles, nativeStyles, colors } from './HabitLibraryScreen.styles';
 import type { LibraryHabit, HabitFormData } from '../types';
 
 // ─── Sub-componentes ────────────────────────────────────────────────
 
 function HabitRow({
-  habit,
-  onPress,
-  onToggleActive,
-  onDelete,
+  habit, onPress, onToggleActive, onDelete, isArchived,
 }: {
-  habit: LibraryHabit;
-  onPress: () => void;
-  onToggleActive: () => void;
-  onDelete: () => void;
+  habit: LibraryHabit; onPress: () => void; onToggleActive: () => void;
+  onDelete: () => void; isArchived: boolean;
 }) {
-  const isActive = habit.is_active === 1;
-  const nameStyle = isActive ? styles.habitName : styles.habitNameInactive;
+  const nameStyle = isArchived ? styles.habitNameInactive : styles.habitName;
+  const metaStyle = isArchived ? styles.habitMetaInactive : styles.habitMeta;
+  const countStyle = isArchived ? styles.habitCountInactive : styles.habitCount;
 
   return (
     <Pressable className={styles.habitRow} onPress={onPress}>
       <View className={styles.habitInfo}>
         <Text className={nameStyle}>{habit.name}</Text>
-        <Text className={styles.habitMeta}>{formatMeta(habit)}</Text>
-        <Text className={styles.habitCount}>
+        <Text className={metaStyle}>{formatMeta(habit)}</Text>
+        <Text className={countStyle}>
           Completado {habit.completionCount} {habit.completionCount === 1 ? 'vez' : 'veces'}
         </Text>
       </View>
       <View className={styles.actionsRow}>
         <Pressable className={styles.eyeButton} onPress={onToggleActive}>
-          {isActive
+          {!isArchived
             ? <Eye color={colors.amber600} size={18} strokeWidth={1.8} />
             : <EyeOff color={colors.gray400} size={18} strokeWidth={1.8} />
           }
@@ -55,8 +53,8 @@ function HabitRow({
 }
 
 function Separator() { return <View className={styles.separator} />; }
-
 function EmptyList() { return <Text className={styles.emptyText}>No hay hábitos creados</Text>; }
+function EmptyArchived() { return <Text className={styles.emptyText}>Sin hábitos archivados</Text>; }
 
 // ─── Pantalla principal ─────────────────────────────────────────────
 
@@ -71,53 +69,20 @@ export function HabitLibraryScreen() {
 
   useEffect(() => { fetchLibrary(); }, [fetchLibrary]);
 
-  const handleAdd = useCallback(() => {
-    setEditingHabit(null);
-    setFormVisible(true);
-  }, []);
+  const { active, archived } = useMemo(() => splitByActive(libraryHabits), [libraryHabits]);
 
-  const handleEdit = useCallback((habit: LibraryHabit) => {
-    setEditingHabit(habit);
-    setFormVisible(true);
-  }, []);
+  const handleAdd = useCallback(() => { setEditingHabit(null); setFormVisible(true); }, []);
+  const handleEdit = useCallback((h: LibraryHabit) => { setEditingHabit(h); setFormVisible(true); }, []);
+  const handleDelete = useCallback((h: LibraryHabit) => confirmDelete(h, removeHabit), [removeHabit]);
+  const handleToggle = useCallback((h: LibraryHabit) => toggleActive(h.id, h.is_active !== 1), [toggleActive]);
 
-  const handleDelete = useCallback(
-    (habit: LibraryHabit) => confirmDelete(habit, removeHabit),
-    [removeHabit],
-  );
-
-  const handleToggleActive = useCallback(
-    (habit: LibraryHabit) => {
-      toggleActive(habit.id, habit.is_active !== 1);
-    },
-    [toggleActive],
-  );
-
-  const handleSave = useCallback(
-    async (data: HabitFormData) => {
-      if (editingHabit) {
-        await editHabit(editingHabit.id, data);
-      } else {
-        await addHabit(data);
-      }
-      setFormVisible(false);
-    },
-    [editingHabit, editHabit, addHabit],
-  );
+  const handleSave = useCallback(async (data: HabitFormData) => {
+    if (editingHabit) { await editHabit(editingHabit.id, data); }
+    else { await addHabit(data); }
+    setFormVisible(false);
+  }, [editingHabit, editHabit, addHabit]);
 
   const handleCancel = useCallback(() => setFormVisible(false), []);
-
-  const renderItem = useCallback(
-    ({ item }: { item: LibraryHabit }) => (
-      <HabitRow
-        habit={item}
-        onPress={() => handleEdit(item)}
-        onToggleActive={() => handleToggleActive(item)}
-        onDelete={() => handleDelete(item)}
-      />
-    ),
-    [handleEdit, handleToggleActive, handleDelete],
-  );
 
   if (isLibraryLoading && libraryHabits.length === 0) {
     return (
@@ -133,16 +98,39 @@ export function HabitLibraryScreen() {
         <Text className={styles.title}>Biblioteca</Text>
         <View className={styles.titleGap} />
 
-        <View className={styles.paper}>
-          <FlatList
-            data={libraryHabits}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            ItemSeparatorComponent={Separator}
-            scrollEnabled={false}
-            ListEmptyComponent={EmptyList}
+        <Text className={styles.sectionTitle}>Hábitos Activos</Text>
+        <View className={styles.sectionGap} />
+        <NotebookPaper>
+          <HabitList
+            data={active}
+            isArchived={false}
+            onEdit={handleEdit}
+            onToggle={handleToggle}
+            onDelete={handleDelete}
+            emptyComponent={EmptyList}
           />
-        </View>
+        </NotebookPaper>
+
+        <View className={styles.sectionGap} />
+
+        {archived.length > 0 && (
+          <View style={nativeStyles.archivedWrapper}>
+            <Text className={styles.sectionTitle}>Hábitos Archivados</Text>
+            <View className={styles.sectionGap} />
+            <NotebookPaper>
+              <HabitList
+                data={archived}
+                isArchived
+                onEdit={handleEdit}
+                onToggle={handleToggle}
+                onDelete={handleDelete}
+                emptyComponent={EmptyArchived}
+              />
+            </NotebookPaper>
+          </View>
+        )}
+
+        <View className={styles.sectionGap} />
       </ScrollView>
 
       <Pressable className={styles.fab} onPress={handleAdd}>
@@ -159,7 +147,53 @@ export function HabitLibraryScreen() {
   );
 }
 
+// ─── Sub-componente lista ───────────────────────────────────────────
+
+function HabitList({
+  data, isArchived, onEdit, onToggle, onDelete, emptyComponent: Empty,
+}: {
+  data: LibraryHabit[];
+  isArchived: boolean;
+  onEdit: (h: LibraryHabit) => void;
+  onToggle: (h: LibraryHabit) => void;
+  onDelete: (h: LibraryHabit) => void;
+  emptyComponent: React.ComponentType;
+}) {
+  const renderItem = useCallback(
+    ({ item }: { item: LibraryHabit }) => (
+      <HabitRow
+        habit={item}
+        isArchived={isArchived}
+        onPress={() => onEdit(item)}
+        onToggleActive={() => onToggle(item)}
+        onDelete={() => onDelete(item)}
+      />
+    ),
+    [isArchived, onEdit, onToggle, onDelete],
+  );
+
+  return (
+    <FlatList
+      data={data}
+      keyExtractor={(item) => item.id}
+      renderItem={renderItem}
+      ItemSeparatorComponent={Separator}
+      scrollEnabled={false}
+      ListEmptyComponent={Empty}
+    />
+  );
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────
+
+function splitByActive(habits: LibraryHabit[]) {
+  const active: LibraryHabit[] = [];
+  const archived: LibraryHabit[] = [];
+  for (const h of habits) {
+    (h.is_active === 1 ? active : archived).push(h);
+  }
+  return { active, archived };
+}
 
 function formatMeta(habit: LibraryHabit): string {
   const freq = FREQUENCY_LABELS[habit.frequency] ?? habit.frequency;
@@ -174,10 +208,7 @@ function parseCategories(json: string): string[] {
   catch { return []; }
 }
 
-function confirmDelete(
-  habit: LibraryHabit,
-  remove: (id: string) => Promise<void>,
-) {
+function confirmDelete(habit: LibraryHabit, remove: (id: string) => Promise<void>) {
   Alert.alert(ALERT_DELETE_HABIT.title, ALERT_DELETE_HABIT.message, [
     { text: ALERT_DELETE_HABIT.cancel, style: 'cancel' },
     { text: ALERT_DELETE_HABIT.confirm, style: 'destructive', onPress: () => remove(habit.id) },

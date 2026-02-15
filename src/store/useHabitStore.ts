@@ -45,6 +45,7 @@ interface HabitState {
   isLibraryLoading: boolean;
 
   // Daily actions
+  resetToToday: () => void;
   setViewDate: (date: string | null) => void;
   fetchHabitsForDate: (date?: string | null) => Promise<void>;
   toggleHabit: (habit: DailyHabit) => Promise<void>;
@@ -74,6 +75,10 @@ export const useHabitStore = create<HabitState>((set, get) => ({
   isLibraryLoading: false,
 
   // ─── Daily actions ──────────────────────────────────────────────
+
+  resetToToday: () => {
+    set({ viewDate: null });
+  },
 
   setViewDate: (date) => {
     set({ viewDate: date });

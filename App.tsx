@@ -17,6 +17,7 @@ import { StatsScreen } from './src/screens/StatsScreen';
 import { ROUTES } from './src/config/constants';
 import { tabBarTheme, iconDefaults, colors } from './src/styles/ui.styles';
 import { initDatabase } from './src/services/db';
+import { useHabitStore } from './src/store/useHabitStore';
 import type { RootTabParamList } from './src/types';
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -82,6 +83,11 @@ export default function App() {
               component={DailySheetScreen}
               options={{
                 tabBarIcon: ({ color }) => TabIcon(CalendarCheck, color),
+              }}
+              listeners={{
+                tabPress: () => {
+                  useHabitStore.getState().resetToToday();
+                },
               }}
             />
             <Tab.Screen

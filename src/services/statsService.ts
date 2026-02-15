@@ -6,6 +6,7 @@
  */
 
 import { getDatabase } from './db';
+import { VALID_AREA_IDS } from '../config/constants';
 import type { Habit, DaySummaryHabit, CategoryPoints, WeeklyComparison } from '../types';
 
 // ─── SQL Constants ──────────────────────────────────────────────────
@@ -150,13 +151,18 @@ function buildHeatmap(
   return result;
 }
 
+/**
+ * Agrega puntos por categoría, deduplicando IDs dentro de cada registro
+ * y filtrando categorías que no existan en HABIT_AREAS (VALID_AREA_IDS).
+ */
 function aggregateByCategory(
   rows: { categories_used: string; points_earned: number }[],
 ): CategoryPoints[] {
   const map: Record<string, number> = {};
 
   for (const row of rows) {
-    const cats = safeParseJson(row.categories_used);
+    const rawCats = safeParseJson(row.categories_used);
+    const cats = [...new Set(rawCats)].filter((id) => VALID_AREA_IDS.has(id));
     const share = row.points_earned / Math.max(cats.length, 1);
     for (const cat of cats) {
       map[cat] = (map[cat] ?? 0) + share;

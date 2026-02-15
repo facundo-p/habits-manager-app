@@ -143,6 +143,9 @@ export const CATEGORY_LABELS: Record<string, string> = {
   productividad: 'Propósito',
 };
 
+/** Set de IDs válidos de áreas (para sanitización de datos). */
+export const VALID_AREA_IDS = new Set(HABIT_AREAS.map((a) => a.id));
+
 // ─── Seed data (hábitos iniciales de prueba) ────────────────────────
 export const SEED_HABITS = [
   { name: 'Meditación matutina', frequency: 'daily', basePoints: 2, categories: '["espiritualidad"]' },

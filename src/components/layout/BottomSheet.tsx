@@ -1,33 +1,75 @@
 /**
- * BottomSheet — Shell reutilizable para modales de tipo "sheet inferior".
+ * BottomSheet — Shell reutilizable para modales tipo "TopSheet".
  *
- * Encapsula Modal + KeyboardAvoidingView + backdrop + sheet.
- * Evita duplicar esta lógica en cada modal (Regla 001: DRY).
+ * Desliza desde la parte superior de la pantalla.
+ * Encapsula Modal + KeyboardAvoidingView + animación + backdrop.
+ * Android Back: usa BackHandler para cerrar el modal y detener la propagación.
  */
 
-import React from 'react';
-import { Modal, KeyboardAvoidingView, Platform, View } from 'react-native';
-import { styles } from './BottomSheet.styles';
+import React, { useEffect, useRef } from 'react';
+import { Modal, KeyboardAvoidingView, Platform, Animated, BackHandler } from 'react-native';
+import { styles, nativeStyles, OFFSCREEN_Y } from './BottomSheet.styles';
 
 interface BottomSheetProps {
   visible: boolean;
+  onClose?: () => void;
   children: React.ReactNode;
 }
 
-export function BottomSheet({ visible, children }: BottomSheetProps) {
+export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
+  const translateY = useRef(new Animated.Value(OFFSCREEN_Y)).current;
+
+  // ─── Android hardware back button ───────────────────────────────
+  useEffect(() => {
+    if (!visible || !onClose) return;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true; // Detener propagación
+    });
+
+    return () => subscription.remove();
+  }, [visible, onClose]);
+
+  // ─── Animación de entrada ───────────────────────────────────────
+  useEffect(() => {
+    if (visible) {
+      animateIn(translateY);
+    } else {
+      translateY.setValue(OFFSCREEN_Y);
+    }
+  }, [visible, translateY]);
+
   return (
-    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className={styles.backdrop}
       >
-        <View
+        <Animated.View
           className={styles.sheet}
-          style={{ marginTop: 24, alignSelf: 'stretch' }}
+          style={[nativeStyles.sheetAnimated, { transform: [{ translateY }] }]}
         >
           {children}
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
+}
+
+// ─── Animación ──────────────────────────────────────────────────────
+
+function animateIn(translateY: Animated.Value) {
+  Animated.spring(translateY, {
+    toValue: 0,
+    useNativeDriver: true,
+    damping: 20,
+    stiffness: 180,
+  }).start();
 }

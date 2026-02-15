@@ -128,10 +128,12 @@ export const mood = {
   thumb: 'w-6 h-6 rounded-full bg-amber-500 shadow-sm',
 } as const;
 
-// ─── Overlay / Modal ────────────────────────────────────────────────
+// ─── Overlay / Modal (TopSheet — desliza desde arriba) ──────────────
 export const overlay = {
-  backdrop: 'flex-1 justify-end bg-black/40',
-  content: 'bg-amber-50 rounded-t-3xl p-6 shadow-lg',
+  /** Backdrop oscuro, justify-start empuja el sheet hacia arriba */
+  backdrop: 'flex-1 justify-start bg-black/40',
+  /** Sheet con bordes redondeados inferiores */
+  content: 'bg-amber-50 rounded-b-3xl p-6 shadow-lg',
 } as const;
 
 // ─── Barra de Progreso ──────────────────────────────────────────────

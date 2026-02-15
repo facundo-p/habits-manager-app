@@ -7,7 +7,7 @@
 
 import * as SQLite from 'expo-sqlite';
 import * as Crypto from 'expo-crypto';
-import { DB_NAME, SEED_HABITS } from '../config/constants';
+import { DB_NAME, SEED_HABITS, VALID_AREA_IDS } from '../config/constants';
 
 let _db: SQLite.SQLiteDatabase | null = null;
 
@@ -79,6 +79,7 @@ export async function initDatabase(): Promise<void> {
   const db = await getDatabase();
   await db.execAsync(SCHEMA_SQL);
   await migrateSchema(db);
+  await sanitizeCategories(db);
   await seedHabits(db);
 }
 
@@ -93,6 +94,48 @@ async function migrateSchema(db: SQLite.SQLiteDatabase): Promise<void> {
     await db.execAsync(
       'ALTER TABLE habits ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1',
     );
+  }
+}
+
+// ─── Sanitización de categorías ─────────────────────────────────────
+
+/**
+ * Recorre habits.default_categories y performed_habits.categories_used.
+ * Elimina cualquier ID que NO exista en HABIT_AREAS.
+ */
+async function sanitizeCategories(db: SQLite.SQLiteDatabase): Promise<void> {
+  await sanitizeTable(db, 'habits', 'default_categories');
+  await sanitizeTable(db, 'performed_habits', 'categories_used');
+}
+
+async function sanitizeTable(
+  db: SQLite.SQLiteDatabase,
+  table: string,
+  column: string,
+): Promise<void> {
+  const rows = await db.getAllAsync<{ id: string; [key: string]: any }>(
+    `SELECT id, ${column} FROM ${table} WHERE ${column} IS NOT NULL`,
+  );
+
+  for (const row of rows) {
+    const cleaned = filterValidIds(row[column]);
+    if (cleaned !== row[column]) {
+      await db.runAsync(
+        `UPDATE ${table} SET ${column} = ? WHERE id = ?`,
+        [cleaned, row.id],
+      );
+    }
+  }
+}
+
+function filterValidIds(json: string): string {
+  try {
+    const arr = JSON.parse(json);
+    if (!Array.isArray(arr)) return '[]';
+    const filtered = arr.filter((id: string) => VALID_AREA_IDS.has(id));
+    return JSON.stringify(filtered);
+  } catch {
+    return '[]';
   }
 }
 

@@ -42,7 +42,7 @@ export function ReflectionModal({
   function handleSave() { onSave(description.trim(), moodValue); }
 
   return (
-    <BottomSheet visible={visible}>
+    <BottomSheet visible={visible} onClose={onSkip}>
       <ModalHeader habitName={habitName} />
       <MoodSection value={moodValue} onValueChange={setMoodValue} />
       <DescriptionWithMic value={description} onChangeText={setDescription} />

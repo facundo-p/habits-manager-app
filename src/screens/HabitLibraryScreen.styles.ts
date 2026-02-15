@@ -2,22 +2,19 @@
  * HabitLibraryScreen.styles.ts — Estilos de la pantalla "Biblioteca".
  */
 
-import { text, layout, card, button, spacing, colors } from '../styles/ui.styles';
+import { StyleSheet } from 'react-native';
+import { text, layout, button, spacing, colors } from '../styles/ui.styles';
 
 export const styles = {
-  /** Contenedor principal */
   container: layout.transparentPadded,
-
-  /** Título de la pantalla */
   title: text.titleLarge,
-
-  /** Espacio debajo del título */
   titleGap: spacing.sectionGap,
 
-  /** Contenedor estilo cuaderno */
-  paper: card.notebookPaper,
+  // ─── Título de sección ────────────────────────────────────────────
+  sectionTitle: text.sectionTitle,
+  sectionGap: spacing.sectionGap,
 
-  // ─── Fila de hábito en la biblioteca ──────────────────────────
+  // ─── Fila de hábito ───────────────────────────────────────────────
   habitRow: 'flex-row items-center justify-between py-3',
   habitInfo: 'flex-1 mr-3',
   habitName: text.body,
@@ -26,27 +23,27 @@ export const styles = {
 
   /** Nombre de hábito inactivo (opaco) */
   habitNameInactive: text.body + ' opacity-40',
+  habitMetaInactive: text.caption + ' opacity-40',
+  habitCountInactive: text.captionSmall + ' opacity-40',
 
-  // ─── Acciones derecha ─────────────────────────────────────────
+  // ─── Acciones derecha ─────────────────────────────────────────────
   actionsRow: 'flex-row items-center gap-1',
-
-  /** Botón de toggle visibilidad (ojo) */
   eyeButton: button.iconSmall,
-
-  /** Botón de borrar (icono) */
   deleteButton: button.destructive,
 
-  /** Separador entre filas */
-  separator: card.lined,
-
-  /** Texto cuando la lista está vacía */
+  // ─── Separadores y estados ────────────────────────────────────────
+  separator: 'border-b border-amber-100/60',
   emptyText: text.caption,
-
-  /** Contenedor del loading */
   loading: layout.centered,
-
-  /** FAB para agregar hábito */
   fab: button.fab,
 } as const;
+
+// ─── Native styles (para opacity en sección archivados) ────────────
+
+export const nativeStyles = StyleSheet.create({
+  archivedWrapper: {
+    opacity: 0.5,
+  },
+});
 
 export { colors };
