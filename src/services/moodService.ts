@@ -1,10 +1,14 @@
 /**
  * moodService.ts — Lógica de negocio para registros de humor.
  *
- * Maneja operaciones en la tabla mood_entries (Regla 003).
+ * Delega el acceso a datos a moodRepository.
+ * Se encarga de: resolución de fechas y generación de timestamps.
+ *
+ * Las firmas públicas NO cambian (contrato con el Store).
  */
 
-import { getDatabase, generateId, getTodayPrefix, getNowTimestamp, getTimestampForDate } from './db';
+import { getTodayPrefix, getNowTimestamp, getTimestampForDate } from './db';
+import * as moodRepo from '../repositories/moodRepository';
 
 /** Crea un registro de humor vinculado opcionalmente a un hábito. */
 export async function createMoodEntry(
@@ -13,13 +17,8 @@ export async function createMoodEntry(
   habitId: string | null,
   datePrefix?: string,
 ): Promise<void> {
-  const db = await getDatabase();
   const ts = datePrefix ? getTimestampForDate(datePrefix) : getNowTimestamp();
-
-  await db.runAsync(
-    'INSERT INTO mood_entries (id, value, description, timestamp, habit_id) VALUES (?, ?, ?, ?, ?)',
-    [generateId(), value, description, ts, habitId],
-  );
+  return moodRepo.insert(value, description, ts, habitId);
 }
 
 /** Obtiene el mood_value para un hábito en una fecha (default: hoy). */
@@ -27,15 +26,8 @@ export async function getMoodForHabit(
   habitId: string,
   datePrefix?: string,
 ): Promise<number | null> {
-  const db = await getDatabase();
   const day = datePrefix ?? getTodayPrefix();
-
-  const row = await db.getFirstAsync<{ value: number }>(
-    "SELECT value FROM mood_entries WHERE habit_id = ? AND timestamp LIKE ? || '%' ORDER BY timestamp DESC LIMIT 1",
-    [habitId, day],
-  );
-
-  return row?.value ?? null;
+  return moodRepo.findValueByHabitAndDate(habitId, day);
 }
 
 /** Elimina registros de mood para un hábito en una fecha (default: hoy). */
@@ -43,11 +35,6 @@ export async function deleteMoodForHabit(
   habitId: string,
   datePrefix?: string,
 ): Promise<void> {
-  const db = await getDatabase();
   const day = datePrefix ?? getTodayPrefix();
-
-  await db.runAsync(
-    "DELETE FROM mood_entries WHERE habit_id = ? AND timestamp LIKE ? || '%'",
-    [habitId, day],
-  );
+  return moodRepo.deleteByHabitAndDate(habitId, day);
 }

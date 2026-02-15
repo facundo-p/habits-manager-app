@@ -1,35 +1,19 @@
 /**
- * statsService.ts — Consultas de estadísticas y progreso.
+ * statsService.ts — Lógica de negocio para estadísticas y progreso.
  *
- * Las funciones mantienen < 20 líneas; SQL largo se extrae a constantes.
- * Los componentes NUNCA ejecutan SQL directamente (Regla 001 + 003).
+ * Delega el acceso a datos a los repositorios.
+ * Se encarga de: cálculo de heatmap, agregación de categorías,
+ * comparación semanal y resumen diario.
+ *
+ * Las firmas públicas NO cambian (contrato con StatsScreen).
  */
 
-import { getDatabase } from './db';
 import { VALID_AREA_IDS } from '../config/constants';
+import * as habitRepo from '../repositories/habitRepository';
+import * as taskRepo from '../repositories/taskRepository';
 import type { Habit, DaySummaryHabit, CategoryPoints, WeeklyComparison } from '../types';
 
-// ─── SQL Constants ──────────────────────────────────────────────────
-
-const SQL_DAILY_TOTAL =
-  "SELECT COALESCE(SUM(base_points), 0) as total FROM habits WHERE frequency = 'daily' AND is_active = 1";
-
-const SQL_EARNED_BY_DAY =
-  "SELECT SUBSTR(timestamp, 9, 2) as day, SUM(points_earned) as earned FROM performed_habits WHERE timestamp LIKE ? || '%' GROUP BY day";
-
-const SQL_CATEGORY_DATA =
-  "SELECT categories_used, points_earned FROM performed_habits WHERE timestamp LIKE ? || '%' AND categories_used IS NOT NULL";
-
-const SQL_WEEK_TOTAL =
-  'SELECT COALESCE(SUM(points_earned), 0) as total FROM performed_habits WHERE timestamp >= ? AND timestamp < ?';
-
-const SQL_DAILY_HABITS =
-  "SELECT * FROM habits WHERE frequency = 'daily' AND is_active = 1";
-
-const SQL_PERFORMED_ON_DATE =
-  "SELECT habit_id FROM performed_habits WHERE timestamp LIKE ? || '%'";
-
-// ─── Helpers ────────────────────────────────────────────────────────
+// ─── Helpers de fecha ────────────────────────────────────────────────
 
 function buildMonthPrefix(month: number, year: number): string {
   return `${year}-${String(month).padStart(2, '0')}`;
@@ -70,18 +54,13 @@ export async function getMonthlyHeatmapData(
   month: number,
   year: number,
 ): Promise<Record<number, number>> {
-  const db = await getDatabase();
   const prefix = buildMonthPrefix(month, year);
+  const [totalPossible, rows] = await Promise.all([
+    habitRepo.sumDailyActivePoints(),
+    taskRepo.sumEarnedByDayInMonth(prefix),
+  ]);
 
-  const totalRow = await db.getFirstAsync<{ total: number }>(SQL_DAILY_TOTAL);
-  const totalPossible = totalRow?.total ?? 0;
   if (totalPossible === 0) return {};
-
-  const rows = await db.getAllAsync<{ day: string; earned: number }>(
-    SQL_EARNED_BY_DAY,
-    [prefix],
-  );
-
   return buildHeatmap(rows, totalPossible);
 }
 
@@ -90,54 +69,37 @@ export async function getCategoryDistribution(
   month: number,
   year: number,
 ): Promise<CategoryPoints[]> {
-  const db = await getDatabase();
   const prefix = buildMonthPrefix(month, year);
-
-  const rows = await db.getAllAsync<{ categories_used: string; points_earned: number }>(
-    SQL_CATEGORY_DATA,
-    [prefix],
-  );
-
+  const rows = await taskRepo.findCategoriesInMonth(prefix);
   return aggregateByCategory(rows);
 }
 
 /** Puntos totales: semana actual vs semana anterior. */
 export async function getWeeklyComparison(): Promise<WeeklyComparison> {
-  const db = await getDatabase();
   const thisWeek = getWeekBounds(0);
   const lastWeek = getWeekBounds(1);
 
-  const [thisRow, lastRow] = await Promise.all([
-    db.getFirstAsync<{ total: number }>(SQL_WEEK_TOTAL, [thisWeek.start, thisWeek.end]),
-    db.getFirstAsync<{ total: number }>(SQL_WEEK_TOTAL, [lastWeek.start, lastWeek.end]),
+  const [thisTotal, lastTotal] = await Promise.all([
+    taskRepo.sumEarnedInRange(thisWeek.start, thisWeek.end),
+    taskRepo.sumEarnedInRange(lastWeek.start, lastWeek.end),
   ]);
 
-  return {
-    thisWeek: thisRow?.total ?? 0,
-    lastWeek: lastRow?.total ?? 0,
-  };
+  return { thisWeek: thisTotal, lastWeek: lastTotal };
 }
 
 /** Hábitos diarios con estado completed para una fecha (YYYY-MM-DD). */
 export async function getHabitsForDate(
   dateStr: string,
 ): Promise<DaySummaryHabit[]> {
-  const db = await getDatabase();
-
-  const [habits, performed] = await Promise.all([
-    db.getAllAsync<Habit>(SQL_DAILY_HABITS),
-    db.getAllAsync<{ habit_id: string }>(SQL_PERFORMED_ON_DATE, [dateStr]),
+  const [habits, doneIds] = await Promise.all([
+    habitRepo.findDailyActive(),
+    taskRepo.findHabitIdsOnDate(dateStr),
   ]);
 
-  const doneSet = new Set(performed.map((p) => p.habit_id));
-
-  return habits.map((h) => ({
-    name: h.name,
-    completed: doneSet.has(h.id),
-  }));
+  return buildDaySummary(habits, doneIds);
 }
 
-// ─── Helpers internos de transformación ──────────────────────────────
+// ─── Helpers internos de transformación (lógica de negocio) ──────────
 
 function buildHeatmap(
   rows: { day: string; earned: number }[],
@@ -162,7 +124,7 @@ function aggregateByCategory(
 
   for (const row of rows) {
     const rawCats = safeParseJson(row.categories_used);
-    const cats = [...new Set(rawCats)].filter((id) => VALID_AREA_IDS.has(id));
+    const cats = [...new Set(rawCats)].filter((id) => VALID_AREA_IDS.has(id as never));
     const share = row.points_earned / Math.max(cats.length, 1);
     for (const cat of cats) {
       map[cat] = (map[cat] ?? 0) + share;
@@ -172,5 +134,13 @@ function aggregateByCategory(
   return Object.entries(map).map(([category, points]) => ({
     category,
     points: Math.round(points * 10) / 10,
+  }));
+}
+
+function buildDaySummary(habits: Habit[], doneIds: string[]): DaySummaryHabit[] {
+  const doneSet = new Set(doneIds);
+  return habits.map((h) => ({
+    name: h.name,
+    completed: doneSet.has(h.id),
   }));
 }
