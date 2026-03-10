@@ -12,6 +12,7 @@ import * as assignmentRepo from '../repositories/assignmentRepository';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
 import type { DailyItem, DailyStats, DailyAssignment } from '../types';
+import { buildStats } from '../utils/statsHelpers';
 
 // ─── Consultas públicas ─────────────────────────────────────────────
 
@@ -219,11 +220,6 @@ function enrichAssignments(
     isSpontaneous: a.is_spontaneous === 1,
     performedHabitId: a.habit_id ? performedMap.get(a.habit_id) ?? null : null,
   }));
-}
-
-function buildStats(earned: number, total: number): DailyStats {
-  const pct = total > 0 ? Math.round((earned / total) * 100) : 0;
-  return { earned, total, percentage: pct };
 }
 
 function nextDay(dateStr: string): string {

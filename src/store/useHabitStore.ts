@@ -97,39 +97,46 @@ export const useHabitStore = create<HabitState>((set, get) => ({
 
   fetchHabitsForDate: async (date) => {
     set({ isLoading: true });
-    const d = date ?? get().viewDate ?? undefined;
-    const [items, stats] = await Promise.all([
-      getItemsForDate(d ?? undefined),
-      getPointsForDate(d ?? undefined),
-    ]);
-    set({ dailyItems: items, dailyStats: stats, isLoading: false });
+    try {
+      const d = date ?? get().viewDate ?? undefined;
+      const [items, stats] = await Promise.all([
+        getItemsForDate(d ?? undefined),
+        getPointsForDate(d ?? undefined),
+      ]);
+      set({ dailyItems: items, dailyStats: stats, isLoading: false });
+    } catch (err) {
+      console.error('[fetchHabitsForDate]', err);
+      set({ isLoading: false });
+    }
   },
 
   toggleItem: async (item) => {
     const datePrefix = get().viewDate ?? undefined;
+    try {
+      if (item.isCompleted) {
+        await uncompleteAssignment(item, datePrefix);
+        if (item.habitId) {
+          await deleteMoodForHabit(item.habitId, datePrefix);
+        }
+        await refreshDaily(set, get);
+      } else {
+        const performedHabitId = await completeAssignment(item, datePrefix);
+        await refreshDaily(set, get);
 
-    if (item.isCompleted) {
-      await uncompleteAssignment(item, datePrefix);
-      if (item.habitId) {
-        await deleteMoodForHabit(item.habitId, datePrefix);
+        if (item.habitId && performedHabitId) {
+          set({
+            pendingReflection: {
+              item,
+              performedHabitId,
+              isEditing: false,
+              initialDescription: '',
+              initialMoodValue: MOOD_DEFAULT_VALUE,
+            },
+          });
+        }
       }
-      await refreshDaily(set, get);
-    } else {
-      const performedHabitId = await completeAssignment(item, datePrefix);
-      await refreshDaily(set, get);
-
-      // Abrir modal de reflexión solo para hábitos regulares
-      if (item.habitId && performedHabitId) {
-        set({
-          pendingReflection: {
-            item,
-            performedHabitId,
-            isEditing: false,
-            initialDescription: '',
-            initialMoodValue: MOOD_DEFAULT_VALUE,
-          },
-        });
-      }
+    } catch (err) {
+      console.error('[toggleItem]', err);
     }
   },
 
@@ -160,17 +167,21 @@ export const useHabitStore = create<HabitState>((set, get) => ({
     const { item, performedHabitId, isEditing } = pendingReflection;
     const datePrefix = viewDate ?? undefined;
 
-    await updatePerformedDescription(performedHabitId, description);
+    try {
+      await updatePerformedDescription(performedHabitId, description);
 
-    if (isEditing && item.habitId) {
-      await deleteMoodForHabit(item.habitId, datePrefix);
+      if (isEditing && item.habitId) {
+        await deleteMoodForHabit(item.habitId, datePrefix);
+      }
+
+      if (item.habitId) {
+        await createMoodEntry(moodValue, description, item.habitId, datePrefix);
+      }
+    } catch (err) {
+      console.error('[saveReflection]', err);
+    } finally {
+      set({ pendingReflection: null });
     }
-
-    if (item.habitId) {
-      await createMoodEntry(moodValue, description, item.habitId, datePrefix);
-    }
-
-    set({ pendingReflection: null });
   },
 
   skipReflection: () => set({ pendingReflection: null }),
@@ -192,38 +203,51 @@ export const useHabitStore = create<HabitState>((set, get) => ({
 
   fetchLibrary: async () => {
     set({ isLibraryLoading: true });
-    const [habits, counts] = await Promise.all([
-      getAllHabits(),
-      getCompletionCounts(),
-    ]);
-    const libraryHabits = enrichWithCounts(habits, counts);
-    set({ libraryHabits, isLibraryLoading: false });
+    try {
+      const [habits, counts] = await Promise.all([
+        getAllHabits(),
+        getCompletionCounts(),
+      ]);
+      const libraryHabits = enrichWithCounts(habits, counts);
+      set({ libraryHabits, isLibraryLoading: false });
+    } catch (err) {
+      console.error('[fetchLibrary]', err);
+      set({ isLibraryLoading: false });
+    }
   },
 
   addHabit: async (data) => {
-    const habitId = await createHabit(data.name, data.frequency, data.basePoints, data.categories);
-    await addAssignmentForHabit(habitId);
-    await refreshAll(set, get);
+    try {
+      const habitId = await createHabit(data.name, data.frequency, data.basePoints, data.categories);
+      await addAssignmentForHabit(habitId);
+      await refreshAll(set, get);
+    } catch (err) { console.error('[addHabit]', err); }
   },
 
   editHabit: async (id, data) => {
-    await updateHabit(id, data.name, data.frequency, data.basePoints, data.categories);
-    await refreshAll(set, get);
+    try {
+      await updateHabit(id, data.name, data.frequency, data.basePoints, data.categories);
+      await refreshAll(set, get);
+    } catch (err) { console.error('[editHabit]', err); }
   },
 
   removeHabit: async (id) => {
-    await deleteHabit(id);
-    await refreshAll(set, get);
+    try {
+      await deleteHabit(id);
+      await refreshAll(set, get);
+    } catch (err) { console.error('[removeHabit]', err); }
   },
 
   toggleActive: async (id, isActive) => {
-    await toggleHabitActive(id, isActive);
-    if (isActive) {
-      await addAssignmentForHabit(id);
-    } else {
-      await removeAssignmentForHabit(id);
-    }
-    await refreshAll(set, get);
+    try {
+      await toggleHabitActive(id, isActive);
+      if (isActive) {
+        await addAssignmentForHabit(id);
+      } else {
+        await removeAssignmentForHabit(id);
+      }
+      await refreshAll(set, get);
+    } catch (err) { console.error('[toggleActive]', err); }
   },
 }));
 

@@ -92,7 +92,8 @@ export function SettingsScreen() {
       if (!imported) { setIsImporting(false); return; }
 
       // Refrescar todos los stores tras la importación
-      await Promise.all([fetchHabitsForDate(null), fetchLibrary()]);
+      const today = new Date().toISOString().slice(0, 10);
+      await Promise.all([fetchHabitsForDate(today), fetchLibrary()]);
       Alert.alert(ALERT_IMPORT_SUCCESS.title, ALERT_IMPORT_SUCCESS.message);
     } catch (err) {
       console.error('Import error:', err);

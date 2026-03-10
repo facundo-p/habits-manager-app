@@ -1,11 +1,13 @@
 /**
- * useSettingsStore.ts — Store de configuración de la app (Zustand).
+ * useSettingsStore.ts — Store de configuración de la app (Zustand + persist).
  *
  * Maneja preferencias de feedback sensorial, dictado de voz e idioma.
- * La propiedad `language` deja la infraestructura lista para i18n.
+ * Persiste en un archivo JSON vía expo-file-system para sobrevivir reinicios.
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export type SupportedLanguage = 'es' | 'en';
 
@@ -21,14 +23,58 @@ interface SettingsState {
   setLanguage: (lang: SupportedLanguage) => void;
 }
 
-export const useSettingsStore = create<SettingsState>((set) => ({
-  hapticsEnabled: true,
-  soundsEnabled: true,
-  voiceDictationEnabled: true,
-  language: 'es',
+const SETTINGS_PATH = `${FileSystem.documentDirectory}settings.json`;
 
-  toggleHaptics: () => set((s) => ({ hapticsEnabled: !s.hapticsEnabled })),
-  toggleSounds: () => set((s) => ({ soundsEnabled: !s.soundsEnabled })),
-  toggleVoiceDictation: () => set((s) => ({ voiceDictationEnabled: !s.voiceDictationEnabled })),
-  setLanguage: (lang) => set({ language: lang }),
+/** Storage adapter que escribe/lee un archivo JSON con expo-file-system. */
+const fileStorage = createJSONStorage(() => ({
+  getItem: async (_key: string): Promise<string | null> => {
+    try {
+      const info = await FileSystem.getInfoAsync(SETTINGS_PATH);
+      if (!info.exists) return null;
+      return FileSystem.readAsStringAsync(SETTINGS_PATH, { encoding: 'utf8' });
+    } catch {
+      return null;
+    }
+  },
+  setItem: async (_key: string, value: string): Promise<void> => {
+    try {
+      await FileSystem.writeAsStringAsync(SETTINGS_PATH, value, { encoding: 'utf8' });
+    } catch {
+      // No bloquear la app si falla el write
+    }
+  },
+  removeItem: async (_key: string): Promise<void> => {
+    try {
+      const info = await FileSystem.getInfoAsync(SETTINGS_PATH);
+      if (info.exists) await FileSystem.deleteAsync(SETTINGS_PATH);
+    } catch {
+      // ignore
+    }
+  },
 }));
+
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set) => ({
+      hapticsEnabled: true,
+      soundsEnabled: true,
+      voiceDictationEnabled: true,
+      language: 'es',
+
+      toggleHaptics: () => set((s) => ({ hapticsEnabled: !s.hapticsEnabled })),
+      toggleSounds: () => set((s) => ({ soundsEnabled: !s.soundsEnabled })),
+      toggleVoiceDictation: () => set((s) => ({ voiceDictationEnabled: !s.voiceDictationEnabled })),
+      setLanguage: (lang) => set({ language: lang }),
+    }),
+    {
+      name: 'cozy-habits-settings',
+      storage: fileStorage,
+      partialize: (state) => ({
+        hapticsEnabled: state.hapticsEnabled,
+        soundsEnabled: state.soundsEnabled,
+        voiceDictationEnabled: state.voiceDictationEnabled,
+        language: state.language,
+      }),
+    },
+  ),
+);

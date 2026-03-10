@@ -20,7 +20,7 @@ import { useFeedback } from '../hooks/useFeedback';
 import {
   CHECKBOX_ICON_SIZE, ALERT_UNMARK, ALERT_UNMARK_SPONTANEOUS,
   FREQUENCY_LABELS, SPONTANEOUS_SECTION_LABEL,
-  AREAS_MAP, MONTH_NAMES, ROUTES,
+  AREAS_MAP, ROUTES,
 } from '../config/constants';
 import { NotebookPaper } from '../components/layout/NotebookPaper';
 import { AppScreenHeader } from '../components/layout/AppScreenHeader';
@@ -28,29 +28,13 @@ import { ReflectionModal } from '../components/modals/ReflectionModal';
 import { AreaInfoModal } from '../components/modals/AreaInfoModal';
 import { SpontaneousModal } from '../components/modals/SpontaneousModal';
 import {
-  styles, nativeStyles, miniProgressFillWidth, colors,
+  styles, miniProgressFillWidth, badgeContainerStyle, colors,
 } from './DailySheetScreen.styles';
 import type { DailyItem, DailyStats, HabitArea, FrequencyGroup, RootTabParamList } from '../types';
+import { parseJsonArray } from '../utils/parsing';
+import { formatTodayDate, formatHistoricDate, isValidDateString } from '../utils/dateHelpers';
 
 type DailyNavProp = BottomTabNavigationProp<RootTabParamList, 'Hoy'>;
-
-// ─── Helpers ────────────────────────────────────────────────────────
-
-function formatTodayDate(): string {
-  return new Date().toLocaleDateString('es-AR', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  });
-}
-
-function formatHistoricDate(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return `${d} de ${MONTH_NAMES[m - 1]} ${y}`;
-}
-
-function safeParseJson(json: string): string[] {
-  try { const a = JSON.parse(json); return Array.isArray(a) ? a : []; }
-  catch { return []; }
-}
 
 function computeGroupStats(items: DailyItem[]): DailyStats {
   const total = items.reduce((s, h) => s + h.points, 0);
@@ -106,7 +90,7 @@ function AreaBadge({ areaId, onPress }: { areaId: string; onPress: (id: string) 
   if (!area) return null;
   return (
     <Pressable
-      style={[nativeStyles.badgeContainer, { backgroundColor: area.color }]}
+      style={badgeContainerStyle(area.color)}
       onPress={() => onPress(areaId)}
     >
       <Text className={styles.badgeText}>{area.label}</Text>
@@ -115,7 +99,7 @@ function AreaBadge({ areaId, onPress }: { areaId: string; onPress: (id: string) 
 }
 
 function AreaBadges({ categories, onBadgePress }: { categories: string; onBadgePress: (id: string) => void }) {
-  const ids = safeParseJson(categories);
+  const ids = parseJsonArray(categories);
   if (ids.length === 0) return null;
   return (
     <View className={styles.badgeRow}>
@@ -257,7 +241,7 @@ export function DailySheetScreen() {
   useEffect(() => {
     if (routeDate) {
       setViewDate(routeDate);
-      navigation.setParams({ date: undefined } as any);
+      navigation.setParams({ date: undefined });
     }
   }, [routeDate, setViewDate, navigation]);
 
@@ -328,7 +312,7 @@ export function DailySheetScreen() {
   const { groups, spontaneous } = groupByFrequency(dailyItems);
 
   // viewDate del store = fuente de verdad (no route params)
-  const isHistoric = !!viewDate;
+  const isHistoric = isValidDateString(viewDate);
 
   if (isLoading && dailyItems.length === 0) {
     return (

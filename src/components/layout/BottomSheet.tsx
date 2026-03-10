@@ -31,12 +31,12 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
     return () => subscription.remove();
   }, [visible, onClose]);
 
-  // ─── Animación de entrada ───────────────────────────────────────
+  // ─── Animación de entrada/salida ────────────────────────────────
   useEffect(() => {
     if (visible) {
       animateIn(translateY);
     } else {
-      translateY.setValue(OFFSCREEN_Y);
+      animateOut(translateY);
     }
   }, [visible, translateY]);
 
@@ -71,5 +71,13 @@ function animateIn(translateY: Animated.Value) {
     useNativeDriver: true,
     damping: 20,
     stiffness: 180,
+  }).start();
+}
+
+function animateOut(translateY: Animated.Value) {
+  Animated.timing(translateY, {
+    toValue: OFFSCREEN_Y,
+    duration: 200,
+    useNativeDriver: true,
   }).start();
 }

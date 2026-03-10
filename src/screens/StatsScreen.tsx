@@ -20,7 +20,7 @@ import {
   getMonthlyHeatmapData, getCategoryDistribution, getWeeklyComparison, getHabitsForDate,
 } from '../services/statsService';
 import {
-  styles, nativeStyles, chartConfig, heatmapCellBg, heatmapTextColor, compBarWidth,
+  styles, nativeStyles, chartConfig, heatmapCellBg, heatmapTextStyle, compBarWidth,
   colors, CHART_WIDTH, CHART_HEIGHT,
 } from './StatsScreen.styles';
 import type { DaySummaryHabit, CategoryPoints, WeeklyComparison, RootTabParamList } from '../types';
@@ -75,13 +75,13 @@ export function StatsScreen() {
   }, [selectedDay, month, year, navigation]);
 
   const goToPrev = useCallback(() => {
-    setMonth((m) => (m === 1 ? 12 : m - 1));
     if (month === 1) setYear((y) => y - 1);
+    setMonth((m) => (m === 1 ? 12 : m - 1));
   }, [month]);
 
   const goToNext = useCallback(() => {
-    setMonth((m) => (m === 12 ? 1 : m + 1));
     if (month === 12) setYear((y) => y + 1);
+    setMonth((m) => (m === 12 ? 1 : m + 1));
   }, [month]);
 
   if (isLoading) {
@@ -184,7 +184,7 @@ function HeatmapCell({ day, percentage, isSelected, onPress }: {
       style={[nativeStyles.cell, heatmapCellBg(percentage), isSelected && nativeStyles.selectedCell]}
       onPress={onPress}
     >
-      <Text className={styles.cellDay} style={{ color: heatmapTextColor(percentage) }}>{day}</Text>
+      <Text className={styles.cellDay} style={heatmapTextStyle(percentage)}>{day}</Text>
     </Pressable>
   );
 }

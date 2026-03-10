@@ -91,4 +91,12 @@ export function miniProgressFillWidth(percentage: number): ViewStyle {
   return { width: `${Math.min(percentage, 100)}%` };
 }
 
+/** ViewStyle completo del badge de área con color dinámico (evita inline style). */
+export function badgeContainerStyle(color: string): ViewStyle {
+  return {
+    ...nativeStyles.badgeContainer,
+    backgroundColor: color,
+  };
+}
+
 export { colors };

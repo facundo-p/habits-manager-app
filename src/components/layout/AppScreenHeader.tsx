@@ -54,7 +54,7 @@ export function AppScreenHeader({
         {showSettings && (
           <Pressable
             className={styles.iconButton}
-            onPress={() => navigation.navigate(ROUTES.SETTINGS as any)}
+            onPress={() => navigation.navigate(ROUTES.SETTINGS as keyof RootStackParamList)}
           >
             <Settings size={18} color={colors.amber700} strokeWidth={iconDefaults.strokeWidth} />
           </Pressable>

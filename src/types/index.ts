@@ -144,7 +144,7 @@ export type RootStackParamList = {
 };
 
 export type RootTabParamList = {
-  Hoy: { date?: string } | undefined;
+  Hoy: { date?: string };
   Biblioteca: undefined;
   Progreso: undefined;
 };

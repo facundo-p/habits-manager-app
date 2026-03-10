@@ -6,7 +6,7 @@
  * y estilos para ítems espontáneos en el detalle del día.
  */
 
-import { Dimensions, StyleSheet, ViewStyle } from 'react-native';
+import { Dimensions, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { text, layout, card, spacing, colors } from '../styles/ui.styles';
 import { HEATMAP_COLORS } from '../config/constants';
 
@@ -149,6 +149,11 @@ export function heatmapCellBg(pct: number | undefined): ViewStyle {
 /** Color de texto de la celda (blanco para fondos oscuros). */
 export function heatmapTextColor(pct: number | undefined): string {
   return pct !== undefined && pct >= 100 ? colors.white : colors.amber900;
+}
+
+/** TextStyle con color dinámico para la celda (evita inline style). */
+export function heatmapTextStyle(pct: number | undefined): TextStyle {
+  return { color: heatmapTextColor(pct) };
 }
 
 /** Ancho proporcional de una barra de comparación semanal. */

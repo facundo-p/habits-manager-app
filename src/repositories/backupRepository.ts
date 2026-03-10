@@ -54,60 +54,51 @@ export async function readAllAssignments(): Promise<DailyAssignment[]> {
   return db.getAllAsync<DailyAssignment>(SQL_ALL_ASSIGNMENTS);
 }
 
-// ─── Limpieza (orden por foreign keys) ───────────────────────────────
+// ─── Restauración atómica (con transacción) ──────────────────────────
 
-export async function clearAllTables(): Promise<void> {
+/**
+ * Limpia todas las tablas e inserta los datos del backup en una única
+ * transacción atómica. Si cualquier paso falla, hace rollback automático.
+ */
+export async function restoreAllData(
+  habits: Habit[],
+  performed: PerformedHabit[],
+  moods: MoodEntry[],
+  assignments: DailyAssignment[],
+): Promise<void> {
   const db = await getDatabase();
-  await db.runAsync(SQL_CLEAR_MOODS);
-  await db.runAsync(SQL_CLEAR_PERFORMED);
-  await db.runAsync(SQL_CLEAR_ASSIGNMENTS);
-  await db.runAsync(SQL_CLEAR_HABITS);
-}
 
-// ─── Inserción masiva ────────────────────────────────────────────────
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(SQL_CLEAR_MOODS);
+    await db.runAsync(SQL_CLEAR_PERFORMED);
+    await db.runAsync(SQL_CLEAR_ASSIGNMENTS);
+    await db.runAsync(SQL_CLEAR_HABITS);
 
-export async function insertHabits(habits: Habit[]): Promise<void> {
-  const db = await getDatabase();
-  for (const h of habits) {
-    await db.runAsync(SQL_INSERT_HABIT, [
-      h.id, h.name, h.frequency, h.base_points,
-      h.default_categories, h.is_active,
-    ]);
-  }
-}
+    for (const h of habits) {
+      await db.runAsync(SQL_INSERT_HABIT, [
+        h.id, h.name, h.frequency, h.base_points,
+        h.default_categories, h.is_active,
+      ]);
+    }
 
-export async function insertPerformed(records: PerformedHabit[]): Promise<void> {
-  const db = await getDatabase();
-  for (const r of records) {
-    await db.runAsync(SQL_INSERT_PERFORMED, [
-      r.id, r.habit_id, r.timestamp, r.points_earned,
-      r.habit_description, r.categories_used,
-    ]);
-  }
-}
+    for (const e of assignments) {
+      await db.runAsync(SQL_INSERT_ASSIGNMENT, [
+        e.id, e.habit_id, e.date, e.snapshot_name, e.snapshot_points,
+        e.snapshot_categories, e.snapshot_frequency, e.is_completed, e.is_spontaneous,
+      ]);
+    }
 
-export async function insertMoods(entries: MoodEntry[]): Promise<void> {
-  const db = await getDatabase();
-  for (const e of entries) {
-    await db.runAsync(SQL_INSERT_MOOD, [
-      e.id, e.value, e.description, e.timestamp, e.habit_id,
-    ]);
-  }
-}
+    for (const r of performed) {
+      await db.runAsync(SQL_INSERT_PERFORMED, [
+        r.id, r.habit_id, r.timestamp, r.points_earned,
+        r.habit_description, r.categories_used,
+      ]);
+    }
 
-export async function insertAssignments(entries: DailyAssignment[]): Promise<void> {
-  const db = await getDatabase();
-  for (const e of entries) {
-    await db.runAsync(SQL_INSERT_ASSIGNMENT, [
-      e.id,
-      e.habit_id,
-      e.date,
-      e.snapshot_name,
-      e.snapshot_points,
-      e.snapshot_categories,
-      e.snapshot_frequency,
-      e.is_completed,
-      e.is_spontaneous,
-    ]);
-  }
+    for (const e of moods) {
+      await db.runAsync(SQL_INSERT_MOOD, [
+        e.id, e.value, e.description, e.timestamp, e.habit_id,
+      ]);
+    }
+  });
 }

@@ -9,6 +9,7 @@
  */
 
 import { VALID_AREA_IDS } from '../config/constants';
+import { parseJsonArray } from '../utils/parsing';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
 import * as assignmentRepo from '../repositories/assignmentRepository';
@@ -40,14 +41,6 @@ function getWeekBounds(weeksAgo: number): { start: string; end: string } {
   return { start: formatDateOnly(monday), end: formatDateOnly(nextMonday) };
 }
 
-function safeParseJson(json: string): string[] {
-  try {
-    const arr = JSON.parse(json);
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
 
 // ─── Consultas públicas ─────────────────────────────────────────────
 
@@ -128,7 +121,7 @@ function aggregateByCategory(
   const map: Record<string, number> = {};
 
   for (const row of rows) {
-    const rawCats = safeParseJson(row.categories_used);
+    const rawCats = parseJsonArray(row.categories_used);
     const cats = [...new Set(rawCats)].filter((id) => VALID_AREA_IDS.has(id as never));
     const share = row.points_earned / Math.max(cats.length, 1);
     for (const cat of cats) {

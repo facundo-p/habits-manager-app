@@ -99,9 +99,10 @@ function parseAndValidate(json: string): BackupData {
 }
 
 async function restoreData(data: BackupData): Promise<void> {
-  await backupRepo.clearAllTables();
-  await backupRepo.insertHabits(data.habits);
-  await backupRepo.insertAssignments(data.daily_assignments);
-  await backupRepo.insertPerformed(data.performed_habits);
-  await backupRepo.insertMoods(data.mood_entries);
+  await backupRepo.restoreAllData(
+    data.habits,
+    data.performed_habits,
+    data.mood_entries,
+    data.daily_assignments,
+  );
 }

@@ -8,8 +8,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView } from 'react-native';
-import { HABIT_AREAS } from '../../config/constants';
 import { BottomSheet } from '../layout/BottomSheet';
+import { AreaPicker } from '../shared/AreaPicker';
 import { styles } from './SpontaneousModal.styles';
 
 interface SpontaneousModalProps {
@@ -45,7 +45,7 @@ export function SpontaneousModal({
         <Text className={styles.note}>Se guardará con 0 puntos.</Text>
         <View className={styles.sectionGap} />
 
-        <AreaPicker selected={categories} onChange={setCategories} />
+        <AreaPicker selected={categories} onChange={setCategories} label="Áreas (opcional)" />
         <View className={styles.sectionGap} />
 
         <FormActions onSave={handleSave} onCancel={onCancel} />
@@ -67,43 +67,6 @@ function NameField({ value, onChangeText }: { value: string; onChangeText: (t: s
         value={value}
         onChangeText={onChangeText}
       />
-    </>
-  );
-}
-
-function AreaPicker({
-  selected, onChange,
-}: {
-  selected: string[];
-  onChange: (cats: string[]) => void;
-}) {
-  function toggleArea(areaId: string) {
-    onChange(
-      selected.includes(areaId)
-        ? selected.filter((c) => c !== areaId)
-        : [...selected, areaId],
-    );
-  }
-
-  return (
-    <>
-      <Text className={styles.label}>Áreas (opcional)</Text>
-      <View className={styles.chipRow}>
-        {HABIT_AREAS.map((area) => {
-          const active = selected.includes(area.id);
-          return (
-            <Pressable
-              key={area.id}
-              className={active ? styles.chipSelected : styles.chipBase}
-              onPress={() => toggleArea(area.id)}
-            >
-              <Text className={active ? styles.chipTextSelected : styles.chipText}>
-                {area.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
     </>
   );
 }

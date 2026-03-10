@@ -16,6 +16,7 @@ import { NotebookPaper } from '../components/layout/NotebookPaper';
 import { HabitFormModal } from '../components/modals/HabitFormModal';
 import { styles, nativeStyles, colors } from './HabitLibraryScreen.styles';
 import type { LibraryHabit, HabitFormData } from '../types';
+import { parseJsonArray } from '../utils/parsing';
 
 // ─── Sub-componentes ────────────────────────────────────────────────
 
@@ -198,15 +199,10 @@ function splitByActive(habits: LibraryHabit[]) {
 
 function formatMeta(habit: LibraryHabit): string {
   const freq = FREQUENCY_LABELS[habit.frequency] ?? habit.frequency;
-  const cats = parseCategories(habit.default_categories);
+  const cats = parseJsonArray(habit.default_categories);
   const catLabels = cats.map((c) => CATEGORY_LABELS[c] ?? c);
   const catStr = catLabels.length > 0 ? ` · ${catLabels.join(', ')}` : '';
   return `${freq} · ${habit.base_points} pts${catStr}`;
-}
-
-function parseCategories(json: string): string[] {
-  try { const a = JSON.parse(json); return Array.isArray(a) ? a : []; }
-  catch { return []; }
 }
 
 function confirmDelete(habit: LibraryHabit, remove: (id: string) => Promise<void>) {

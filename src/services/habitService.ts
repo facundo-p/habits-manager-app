@@ -12,6 +12,7 @@ import { getTodayPrefix, getNowTimestamp, getTimestampForDate } from './db';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
 import type { Habit, DailyHabit, DailyStats } from '../types';
+import { buildStats } from '../utils/statsHelpers';
 
 // ─── Consultas ──────────────────────────────────────────────────────
 
@@ -129,7 +130,3 @@ function enrichWithPerformed(
   }));
 }
 
-function buildStats(earned: number, total: number): DailyStats {
-  const pct = total > 0 ? Math.round((earned / total) * 100) : 0;
-  return { earned, total, percentage: pct };
-}

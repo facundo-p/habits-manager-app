@@ -6,14 +6,14 @@
  * Reutiliza BottomSheet como shell (Regla 001: DRY).
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, Pressable, Animated } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, Pressable } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { Mic, MicOff } from 'lucide-react-native';
 import { MOOD_MIN, MOOD_MAX, MOOD_STEP, MOOD_DEFAULT_VALUE } from '../../config/constants';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 import { BottomSheet } from '../layout/BottomSheet';
-import { styles, sliderColors, nativeStyles, colors } from './ReflectionModal.styles';
+import { MicButton } from '../shared/MicButton';
+import { styles, sliderColors, nativeStyles } from './ReflectionModal.styles';
 
 interface ReflectionModalProps {
   visible: boolean;
@@ -122,39 +122,6 @@ function DescriptionWithMic({
       </View>
       <View className={styles.sectionGap} />
     </>
-  );
-}
-
-function MicButton({
-  isListening, isAvailable, onPress,
-}: {
-  isListening: boolean; isAvailable: boolean; onPress: () => void;
-}) {
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (isListening) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 0.4, duration: 600, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        ]),
-      ).start();
-    } else {
-      pulseAnim.stopAnimation();
-      pulseAnim.setValue(1);
-    }
-  }, [isListening, pulseAnim]);
-
-  const color = isListening ? colors.rose400 : colors.amber600;
-  const Icon = isListening ? MicOff : Mic;
-
-  return (
-    <Pressable className={styles.micButton} onPress={onPress}>
-      <Animated.View style={{ opacity: pulseAnim }}>
-        <Icon color={color} size={20} strokeWidth={1.8} />
-      </Animated.View>
-    </Pressable>
   );
 }
 
