@@ -42,10 +42,10 @@ export function getTimestampForDate(datePrefix: string): string {
 
 // ─── Inicialización ─────────────────────────────────────────────────
 
-const SCHEMA_SQL = `
-  PRAGMA journal_mode = WAL;
-  PRAGMA foreign_keys = ON;
+const SQL_ENABLE_WAL = 'PRAGMA journal_mode = WAL';
+const SQL_ENABLE_FK = 'PRAGMA foreign_keys = ON';
 
+const SQL_CREATE_HABITS = `
   CREATE TABLE IF NOT EXISTS habits (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -53,8 +53,10 @@ const SCHEMA_SQL = `
     base_points INTEGER NOT NULL DEFAULT 1,
     default_categories TEXT DEFAULT '[]',
     is_active INTEGER NOT NULL DEFAULT 1
-  );
+  )
+`;
 
+const SQL_CREATE_PERFORMED = `
   CREATE TABLE IF NOT EXISTS performed_habits (
     id TEXT PRIMARY KEY,
     habit_id TEXT NOT NULL,
@@ -63,8 +65,10 @@ const SCHEMA_SQL = `
     habit_description TEXT,
     categories_used TEXT,
     FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
-  );
+  )
+`;
 
+const SQL_CREATE_MOODS = `
   CREATE TABLE IF NOT EXISTS mood_entries (
     id TEXT PRIMARY KEY,
     value REAL NOT NULL,
@@ -72,15 +76,48 @@ const SCHEMA_SQL = `
     timestamp TEXT NOT NULL,
     habit_id TEXT,
     FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE SET NULL
-  );
+  )
+`;
+
+const SQL_CREATE_ASSIGNMENTS = `
+  CREATE TABLE IF NOT EXISTS daily_assignments (
+    id TEXT PRIMARY KEY,
+    habit_id TEXT,
+    date TEXT NOT NULL,
+    snapshot_name TEXT NOT NULL,
+    snapshot_points INTEGER NOT NULL DEFAULT 0,
+    snapshot_categories TEXT DEFAULT '[]',
+    snapshot_frequency TEXT DEFAULT 'daily',
+    is_completed INTEGER NOT NULL DEFAULT 0,
+    is_spontaneous INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE SET NULL
+  )
 `;
 
 export async function initDatabase(): Promise<void> {
   const db = await getDatabase();
-  await db.execAsync(SCHEMA_SQL);
+  await executeSchema(db);
   await migrateSchema(db);
   await sanitizeCategories(db);
   await seedHabits(db);
+}
+
+async function executeSchema(db: SQLite.SQLiteDatabase): Promise<void> {
+  await db.execAsync(SQL_ENABLE_WAL);
+  await db.execAsync(SQL_ENABLE_FK);
+  await db.execAsync(SQL_CREATE_HABITS);
+  await db.execAsync(SQL_CREATE_PERFORMED);
+  await db.execAsync(SQL_CREATE_MOODS);
+  await db.execAsync(SQL_CREATE_ASSIGNMENTS);
+}
+
+/** Verifica si la tabla daily_assignments ya existe (para uso externo). */
+export async function hasDailyAssignmentsTable(): Promise<boolean> {
+  const db = await getDatabase();
+  const result = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='daily_assignments'",
+  );
+  return (result?.count ?? 0) > 0;
 }
 
 // ─── Migración (para DBs existentes sin is_active) ──────────────────

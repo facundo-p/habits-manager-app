@@ -15,8 +15,8 @@ export const styles = {
   titleGap: spacing.sectionGap,
 
   // ─── Header histórico ──────────────────────────────────────────
-  /** Fila del header: título + botón volver */
-  headerRow: 'flex-row items-center justify-between',
+  /** Fila de acciones del header histórico */
+  headerRow: 'flex-row items-center justify-end',
   /** Botón "Guardar y Volver" */
   goBackButton: button.secondary,
   goBackText: button.secondaryText,
@@ -56,6 +56,16 @@ export const styles = {
   separator: 'border-b border-amber-100/60',
   loading: layout.centered,
   emptyText: text.caption,
+
+  // ─── Botón de logro espontáneo ──────────────────────────────────
+  spontaneousButton: 'flex-row items-center gap-2 py-3 px-4 mb-4 rounded-xl border border-dashed border-amber-400/70 bg-amber-50/50',
+  spontaneousButtonText: 'text-sm font-sans text-amber-700 font-medium',
+  spontaneousPlusIcon: 'text-lg font-bold text-amber-600',
+
+  // ─── Sección "Logros del Día" ────────────────────────────────────
+  spontaneousRow: 'flex-row items-center gap-3 py-3',
+  spontaneousName: text.body,
+  spontaneousDeleteBtn: 'w-7 h-7 rounded-full items-center justify-center',
 } as const;
 
 // ─── Native styles (para badges dinámicos y barras) ────────────────
@@ -79,6 +89,14 @@ export function progressFillWidth(percentage: number): ViewStyle {
 /** Ancho dinámico de la mini barra de progreso. */
 export function miniProgressFillWidth(percentage: number): ViewStyle {
   return { width: `${Math.min(percentage, 100)}%` };
+}
+
+/** ViewStyle completo del badge de área con color dinámico (evita inline style). */
+export function badgeContainerStyle(color: string): ViewStyle {
+  return {
+    ...nativeStyles.badgeContainer,
+    backgroundColor: color,
+  };
 }
 
 export { colors };

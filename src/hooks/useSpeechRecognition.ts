@@ -21,9 +21,16 @@ try {
   // Módulo no disponible
 }
 
+const LOCALE_MAP: Record<string, string> = {
+  es: 'es-AR',
+  en: 'en-US',
+};
+
 export function useSpeechRecognition(onPartialResult: (text: string) => void) {
   const [isListening, setIsListening] = useState(false);
   const voiceEnabled = useSettingsStore((s) => s.voiceDictationEnabled);
+  const language = useSettingsStore((s) => s.language);
+  const locale = LOCALE_MAP[language] ?? 'es-AR';
   const callbackRef = useRef(onPartialResult);
   callbackRef.current = onPartialResult;
 
@@ -45,7 +52,7 @@ export function useSpeechRecognition(onPartialResult: (text: string) => void) {
     }
     try {
       setIsListening(true);
-      await SpeechModule.ExpoSpeechRecognitionModule?.start?.({ lang: 'es-AR' });
+      await SpeechModule.ExpoSpeechRecognitionModule?.start?.({ lang: locale });
     } catch {
       setIsListening(false);
     }

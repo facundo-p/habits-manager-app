@@ -33,11 +33,39 @@ export interface MoodEntry {
   habit_id: string | null;
 }
 
+// ─── Daily Assignments (Cápsula del Tiempo) ─────────────────────────
+
+/** Fila cruda de la tabla daily_assignments */
+export interface DailyAssignment {
+  id: string;
+  habit_id: string | null;
+  date: string;
+  snapshot_name: string;
+  snapshot_points: number;
+  snapshot_categories: string;
+  snapshot_frequency: string;
+  is_completed: number; // 0 | 1
+  is_spontaneous: number; // 0 | 1
+}
+
 // ─── Vistas enriquecidas ────────────────────────────────────────────
 
-/** Habit enriquecido con estado de completado para la vista diaria */
+/** Habit enriquecido con estado de completado para la vista diaria (legacy) */
 export interface DailyHabit extends Habit {
   completedToday: boolean;
+  performedHabitId: string | null;
+}
+
+/** Ítem enriquecido del día basado en daily_assignments */
+export interface DailyItem {
+  assignmentId: string;
+  habitId: string | null;
+  name: string;
+  points: number;
+  categories: string; // JSON string
+  frequency: 'daily' | 'weekly' | 'monthly';
+  isCompleted: boolean;
+  isSpontaneous: boolean;
   performedHabitId: string | null;
 }
 
@@ -48,16 +76,16 @@ export interface DailyStats {
   percentage: number;
 }
 
-/** Grupo de hábitos por frecuencia con sus stats */
+/** Grupo de ítems por frecuencia con sus stats */
 export interface FrequencyGroup {
   frequency: 'daily' | 'weekly' | 'monthly';
-  habits: DailyHabit[];
+  items: DailyItem[];
   stats: DailyStats;
 }
 
-/** Datos del hábito pendiente de reflexión (modal abierto) */
+/** Datos del ítem pendiente de reflexión (modal abierto) */
 export interface PendingReflection {
-  habit: DailyHabit;
+  item: DailyItem;
   performedHabitId: string;
   isEditing: boolean;
   initialDescription: string;
@@ -82,6 +110,9 @@ export interface LibraryHabit extends Habit {
 export interface DaySummaryHabit {
   name: string;
   completed: boolean;
+  isSpontaneous: boolean;
+  points: number;
+  frequency: string;
 }
 
 export interface CategoryPoints {
@@ -113,7 +144,7 @@ export type RootStackParamList = {
 };
 
 export type RootTabParamList = {
-  Hoy: { date?: string } | undefined;
+  Hoy: { date?: string };
   Biblioteca: undefined;
   Progreso: undefined;
 };
@@ -126,4 +157,5 @@ export interface BackupData {
   habits: Habit[];
   performed_habits: PerformedHabit[];
   mood_entries: MoodEntry[];
+  daily_assignments: DailyAssignment[];
 }

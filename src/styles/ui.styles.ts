@@ -97,6 +97,9 @@ export const checkbox = {
 export const chip = {
   base: 'px-3 py-1.5 rounded-full border border-amber-300 mr-2 mb-2',
   selected: 'px-3 py-1.5 rounded-full bg-amber-500 border border-amber-500 mr-2 mb-2',
+  /** Variantes sin margen, para usar dentro de un wrapper que ya gestiona el espaciado */
+  innerBase: 'px-3 py-1.5 rounded-full border border-amber-300',
+  innerSelected: 'px-3 py-1.5 rounded-full bg-amber-500 border border-amber-500',
   text: 'text-sm font-sans text-amber-700',
   textSelected: 'text-sm font-sans text-white',
   row: 'flex-row flex-wrap',

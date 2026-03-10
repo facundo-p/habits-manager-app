@@ -60,10 +60,11 @@ export async function importBackup(): Promise<boolean> {
 // ─── Helpers internos ────────────────────────────────────────────────
 
 async function buildBackupData(): Promise<BackupData> {
-  const [habits, performed_habits, mood_entries] = await Promise.all([
+  const [habits, performed_habits, mood_entries, daily_assignments] = await Promise.all([
     backupRepo.readAllHabits(),
     backupRepo.readAllPerformed(),
     backupRepo.readAllMoods(),
+    backupRepo.readAllAssignments(),
   ]);
 
   return {
@@ -72,6 +73,7 @@ async function buildBackupData(): Promise<BackupData> {
     habits,
     performed_habits,
     mood_entries,
+    daily_assignments,
   };
 }
 
@@ -90,12 +92,17 @@ function parseAndValidate(json: string): BackupData {
     throw new Error('Falta mood_entries en el respaldo');
   }
 
-  return data as BackupData;
+  return {
+    ...data,
+    daily_assignments: Array.isArray(data.daily_assignments) ? data.daily_assignments : [],
+  } as BackupData;
 }
 
 async function restoreData(data: BackupData): Promise<void> {
-  await backupRepo.clearAllTables();
-  await backupRepo.insertHabits(data.habits);
-  await backupRepo.insertPerformed(data.performed_habits);
-  await backupRepo.insertMoods(data.mood_entries);
+  await backupRepo.restoreAllData(
+    data.habits,
+    data.performed_habits,
+    data.mood_entries,
+    data.daily_assignments,
+  );
 }

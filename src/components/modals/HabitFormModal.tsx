@@ -13,8 +13,10 @@ import {
 } from '../../config/constants';
 import { BottomSheet } from '../layout/BottomSheet';
 import { AreaInfoModal } from './AreaInfoModal';
+import { AreaPicker } from '../shared/AreaPicker';
 import { styles } from './HabitFormModal.styles';
 import type { Habit, HabitFormData, HabitArea } from '../../types';
+import { parseJsonArray } from '../../utils/parsing';
 
 interface HabitFormModalProps {
   visible: boolean;
@@ -148,49 +150,6 @@ function FrequencyPicker({
   );
 }
 
-function AreaPicker({
-  selected, onChange, onInfo,
-}: {
-  selected: string[];
-  onChange: (cats: string[]) => void;
-  onInfo: (areaId: string) => void;
-}) {
-  function toggleArea(areaId: string) {
-    onChange(
-      selected.includes(areaId)
-        ? selected.filter((c) => c !== areaId)
-        : [...selected, areaId],
-    );
-  }
-
-  return (
-    <>
-      <Text className={styles.label}>Áreas</Text>
-      <View className={styles.chipRow}>
-        {HABIT_AREAS.map((area) => {
-          const active = selected.includes(area.id);
-          return (
-            <View key={area.id} className={styles.chipWithInfo}>
-              <Pressable
-                className={active ? styles.chipSelected : styles.chipBase}
-                onPress={() => toggleArea(area.id)}
-                style={{ marginRight: 0, marginBottom: 0 }}
-              >
-                <Text className={active ? styles.chipTextSelected : styles.chipText}>
-                  {area.label}
-                </Text>
-              </Pressable>
-              <Pressable className={styles.infoButton} onPress={() => onInfo(area.id)}>
-                <Text className={styles.infoButtonText}>i</Text>
-              </Pressable>
-            </View>
-          );
-        })}
-      </View>
-    </>
-  );
-}
-
 function FormActions({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
   return (
     <>
@@ -206,11 +165,6 @@ function FormActions({ onSave, onCancel }: { onSave: () => void; onCancel: () =>
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
-function parseCategories(json: string): string[] {
-  try { const a = JSON.parse(json); return Array.isArray(a) ? a : []; }
-  catch { return []; }
-}
-
 function populateForm(
   habit: Habit,
   setName: (v: string) => void,
@@ -221,7 +175,7 @@ function populateForm(
   setName(habit.name);
   setFreq(habit.frequency);
   setPts(habit.base_points);
-  setCats(parseCategories(habit.default_categories));
+  setCats(parseJsonArray(habit.default_categories));
 }
 
 function resetForm(

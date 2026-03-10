@@ -12,11 +12,12 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Switch, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Download, Upload, Globe, Image } from 'lucide-react-native';
+import { Download, Upload, Globe, Image } from 'lucide-react-native';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useHabitStore } from '../store/useHabitStore';
 import { exportBackup, importBackup } from '../services/backupService';
 import { NotebookPaper } from '../components/layout/NotebookPaper';
+import { AppScreenHeader } from '../components/layout/AppScreenHeader';
 import {
   ALERT_IMPORT, ALERT_IMPORT_SUCCESS, ALERT_IMPORT_ERROR, ALERT_EXPORT_ERROR,
 } from '../config/constants';
@@ -91,7 +92,8 @@ export function SettingsScreen() {
       if (!imported) { setIsImporting(false); return; }
 
       // Refrescar todos los stores tras la importación
-      await Promise.all([fetchHabitsForDate(null), fetchLibrary()]);
+      const today = new Date().toISOString().slice(0, 10);
+      await Promise.all([fetchHabitsForDate(today), fetchLibrary()]);
       Alert.alert(ALERT_IMPORT_SUCCESS.title, ALERT_IMPORT_SUCCESS.message);
     } catch (err) {
       console.error('Import error:', err);
@@ -110,10 +112,12 @@ export function SettingsScreen() {
 
   return (
     <ScrollView className={styles.container}>
-      <Header onBack={() => navigation.goBack()} />
-
-      <Text className={styles.title}>Ajustes</Text>
-      <Text className={styles.subtitle}>Personaliza tu experiencia CozyHabit</Text>
+      <AppScreenHeader
+        title="Ajustes"
+        subtitle="Personaliza tu experiencia CozyHabit"
+        onBack={() => navigation.goBack()}
+        showSettings={false}
+      />
 
       {/* ── Personalización ──────────────────────────────────────── */}
       <Text className={styles.sectionTitle}>Personalización</Text>
@@ -169,17 +173,5 @@ export function SettingsScreen() {
 
       <Text className={styles.versionText}>CozyHabit v1.0.0</Text>
     </ScrollView>
-  );
-}
-
-// ─── Header con botón atrás ─────────────────────────────────────────
-
-function Header({ onBack }: { onBack: () => void }) {
-  return (
-    <View className={styles.headerRow}>
-      <Pressable className={styles.backButton} onPress={onBack}>
-        <ArrowLeft size={20} color={colors.amber800} strokeWidth={iconDefaults.strokeWidth} />
-      </Pressable>
-    </View>
   );
 }

@@ -11,10 +11,12 @@ import { View, Text, FlatList, Pressable, ActivityIndicator, ScrollView, Alert }
 import { Trash2, Plus, Eye, EyeOff } from 'lucide-react-native';
 import { useHabitStore } from '../store/useHabitStore';
 import { ALERT_DELETE_HABIT, FREQUENCY_LABELS, CATEGORY_LABELS } from '../config/constants';
+import { AppScreenHeader } from '../components/layout/AppScreenHeader';
 import { NotebookPaper } from '../components/layout/NotebookPaper';
 import { HabitFormModal } from '../components/modals/HabitFormModal';
 import { styles, nativeStyles, colors } from './HabitLibraryScreen.styles';
 import type { LibraryHabit, HabitFormData } from '../types';
+import { parseJsonArray } from '../utils/parsing';
 
 // ─── Sub-componentes ────────────────────────────────────────────────
 
@@ -95,7 +97,7 @@ export function HabitLibraryScreen() {
   return (
     <View className={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Text className={styles.title}>Biblioteca</Text>
+        <AppScreenHeader title="Biblioteca" />
         <View className={styles.titleGap} />
 
         <Text className={styles.sectionTitle}>Hábitos Activos</Text>
@@ -197,15 +199,10 @@ function splitByActive(habits: LibraryHabit[]) {
 
 function formatMeta(habit: LibraryHabit): string {
   const freq = FREQUENCY_LABELS[habit.frequency] ?? habit.frequency;
-  const cats = parseCategories(habit.default_categories);
+  const cats = parseJsonArray(habit.default_categories);
   const catLabels = cats.map((c) => CATEGORY_LABELS[c] ?? c);
   const catStr = catLabels.length > 0 ? ` · ${catLabels.join(', ')}` : '';
   return `${freq} · ${habit.base_points} pts${catStr}`;
-}
-
-function parseCategories(json: string): string[] {
-  try { const a = JSON.parse(json); return Array.isArray(a) ? a : []; }
-  catch { return []; }
 }
 
 function confirmDelete(habit: LibraryHabit, remove: (id: string) => Promise<void>) {

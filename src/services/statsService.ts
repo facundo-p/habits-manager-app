@@ -9,9 +9,12 @@
  */
 
 import { VALID_AREA_IDS } from '../config/constants';
+import { parseJsonArray } from '../utils/parsing';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
-import type { Habit, DaySummaryHabit, CategoryPoints, WeeklyComparison } from '../types';
+import * as assignmentRepo from '../repositories/assignmentRepository';
+import { ensureAssignmentsForDate } from './assignmentService';
+import type { DaySummaryHabit, CategoryPoints, WeeklyComparison } from '../types';
 
 // ─── Helpers de fecha ────────────────────────────────────────────────
 
@@ -38,14 +41,6 @@ function getWeekBounds(weeksAgo: number): { start: string; end: string } {
   return { start: formatDateOnly(monday), end: formatDateOnly(nextMonday) };
 }
 
-function safeParseJson(json: string): string[] {
-  try {
-    const arr = JSON.parse(json);
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
 
 // ─── Consultas públicas ─────────────────────────────────────────────
 
@@ -55,13 +50,10 @@ export async function getMonthlyHeatmapData(
   year: number,
 ): Promise<Record<number, number>> {
   const prefix = buildMonthPrefix(month, year);
-  const [totalPossible, rows] = await Promise.all([
-    habitRepo.sumDailyActivePoints(),
-    taskRepo.sumEarnedByDayInMonth(prefix),
-  ]);
+  const rows = await assignmentRepo.sumByDayInMonth(prefix);
 
-  if (totalPossible === 0) return {};
-  return buildHeatmap(rows, totalPossible);
+  if (rows.length === 0) return {};
+  return buildHeatmapFromAssignments(rows);
 }
 
 /** Distribución de categorías (pie chart) para un mes dado. */
@@ -87,28 +79,34 @@ export async function getWeeklyComparison(): Promise<WeeklyComparison> {
   return { thisWeek: thisTotal, lastWeek: lastTotal };
 }
 
-/** Hábitos diarios con estado completed para una fecha (YYYY-MM-DD). */
+/** Ítems del día basados en daily_assignments (snapshot histórico). */
 export async function getHabitsForDate(
   dateStr: string,
 ): Promise<DaySummaryHabit[]> {
-  const [habits, doneIds] = await Promise.all([
-    habitRepo.findDailyActive(),
-    taskRepo.findHabitIdsOnDate(dateStr),
-  ]);
-
-  return buildDaySummary(habits, doneIds);
+  await ensureAssignmentsForDate(dateStr);
+  const assignments = await assignmentRepo.findByDate(dateStr);
+  return assignments.map((a) => ({
+    name: a.snapshot_name,
+    completed: a.is_completed === 1,
+    isSpontaneous: a.is_spontaneous === 1,
+    points: a.snapshot_points,
+    frequency: a.snapshot_frequency,
+  }));
 }
 
 // ─── Helpers internos de transformación (lógica de negocio) ──────────
 
-function buildHeatmap(
-  rows: { day: string; earned: number }[],
-  totalPossible: number,
+/** Construye heatmap con totales por día (cada día tiene su propio total posible). */
+function buildHeatmapFromAssignments(
+  rows: { day: string; earned: number; total: number }[],
 ): Record<number, number> {
   const result: Record<number, number> = {};
   for (const row of rows) {
     const dayNum = parseInt(row.day, 10);
-    result[dayNum] = Math.min(Math.round((row.earned / totalPossible) * 100), 100);
+    const pct = row.total > 0
+      ? Math.min(Math.round((row.earned / row.total) * 100), 100)
+      : 0;
+    result[dayNum] = pct;
   }
   return result;
 }
@@ -123,7 +121,7 @@ function aggregateByCategory(
   const map: Record<string, number> = {};
 
   for (const row of rows) {
-    const rawCats = safeParseJson(row.categories_used);
+    const rawCats = parseJsonArray(row.categories_used);
     const cats = [...new Set(rawCats)].filter((id) => VALID_AREA_IDS.has(id as never));
     const share = row.points_earned / Math.max(cats.length, 1);
     for (const cat of cats) {
@@ -137,10 +135,3 @@ function aggregateByCategory(
   }));
 }
 
-function buildDaySummary(habits: Habit[], doneIds: string[]): DaySummaryHabit[] {
-  const doneSet = new Set(doneIds);
-  return habits.map((h) => ({
-    name: h.name,
-    completed: doneSet.has(h.id),
-  }));
-}
