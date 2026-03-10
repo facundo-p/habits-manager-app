@@ -11,6 +11,7 @@ import { View, Text, FlatList, Pressable, ActivityIndicator, ScrollView, Alert }
 import { Trash2, Plus, Eye, EyeOff } from 'lucide-react-native';
 import { useHabitStore } from '../store/useHabitStore';
 import { ALERT_DELETE_HABIT, FREQUENCY_LABELS, CATEGORY_LABELS } from '../config/constants';
+import { AppScreenHeader } from '../components/layout/AppScreenHeader';
 import { NotebookPaper } from '../components/layout/NotebookPaper';
 import { HabitFormModal } from '../components/modals/HabitFormModal';
 import { styles, nativeStyles, colors } from './HabitLibraryScreen.styles';
@@ -95,7 +96,7 @@ export function HabitLibraryScreen() {
   return (
     <View className={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <Text className={styles.title}>Biblioteca</Text>
+        <AppScreenHeader title="Biblioteca" />
         <View className={styles.titleGap} />
 
         <Text className={styles.sectionTitle}>Hábitos Activos</Text>

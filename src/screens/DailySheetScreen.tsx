@@ -23,6 +23,7 @@ import {
   AREAS_MAP, MONTH_NAMES, ROUTES,
 } from '../config/constants';
 import { NotebookPaper } from '../components/layout/NotebookPaper';
+import { AppScreenHeader } from '../components/layout/AppScreenHeader';
 import { ReflectionModal } from '../components/modals/ReflectionModal';
 import { AreaInfoModal } from '../components/modals/AreaInfoModal';
 import { SpontaneousModal } from '../components/modals/SpontaneousModal';
@@ -339,11 +340,18 @@ export function DailySheetScreen() {
 
   return (
     <ScrollView className={styles.container}>
+      <AppScreenHeader
+        title={isHistoric ? 'Editando' : 'Hoy'}
+        subtitle={isHistoric ? formatHistoricDate(viewDate!) : formatTodayDate()}
+      />
+
       {isHistoric ? (
-        <HistoricHeader date={viewDate!} onGoBack={handleGoBack} />
-      ) : (
-        <TodayHeader />
-      )}
+        <View className={styles.headerRow}>
+          <Pressable className={styles.goBackButton} onPress={handleGoBack}>
+            <Text className={styles.goBackText}>Guardar y Volver</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View className={styles.titleGap} />
 
@@ -395,32 +403,5 @@ export function DailySheetScreen() {
         onCancel={() => setSpontaneousVisible(false)}
       />
     </ScrollView>
-  );
-}
-
-// ─── Headers ────────────────────────────────────────────────────────
-
-function TodayHeader() {
-  return (
-    <>
-      <Text className={styles.title}>Hoy</Text>
-      <Text className={styles.dateCaption}>{formatTodayDate()}</Text>
-    </>
-  );
-}
-
-function HistoricHeader({ date, onGoBack }: { date: string; onGoBack: () => void }) {
-  return (
-    <>
-      <View className={styles.headerRow}>
-        <View>
-          <Text className={styles.title}>Editando</Text>
-          <Text className={styles.editingLabel}>{formatHistoricDate(date)}</Text>
-        </View>
-        <Pressable className={styles.goBackButton} onPress={onGoBack}>
-          <Text className={styles.goBackText}>Guardar y Volver</Text>
-        </Pressable>
-      </View>
-    </>
   );
 }

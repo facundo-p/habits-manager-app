@@ -157,4 +157,5 @@ export interface BackupData {
   habits: Habit[];
   performed_habits: PerformedHabit[];
   mood_entries: MoodEntry[];
+  daily_assignments: DailyAssignment[];
 }

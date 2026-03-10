@@ -15,6 +15,7 @@ import {
   MONTH_NAMES, WEEKDAY_LABELS, CATEGORY_LABELS, CATEGORY_CHART_COLORS,
   FREQUENCY_LABELS, ROUTES,
 } from '../config/constants';
+import { AppScreenHeader } from '../components/layout/AppScreenHeader';
 import {
   getMonthlyHeatmapData, getCategoryDistribution, getWeeklyComparison, getHabitsForDate,
 } from '../services/statsService';
@@ -95,7 +96,7 @@ export function StatsScreen() {
 
   return (
     <ScrollView className={styles.container} showsVerticalScrollIndicator={false}>
-      <Text className={styles.title}>Progreso</Text>
+      <AppScreenHeader title="Progreso" />
       <View className={styles.titleGap} />
 
       <HeatmapSection

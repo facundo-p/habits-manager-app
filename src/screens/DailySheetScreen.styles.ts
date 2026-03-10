@@ -15,8 +15,8 @@ export const styles = {
   titleGap: spacing.sectionGap,
 
   // ─── Header histórico ──────────────────────────────────────────
-  /** Fila del header: título + botón volver */
-  headerRow: 'flex-row items-center justify-between',
+  /** Fila de acciones del header histórico */
+  headerRow: 'flex-row items-center justify-end',
   /** Botón "Guardar y Volver" */
   goBackButton: button.secondary,
   goBackText: button.secondaryText,
