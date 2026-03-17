@@ -1,0 +1,91 @@
+# Requirements: Cozy Habits — Bug Fixes, Tech Debt & Cloud Backup
+
+**Defined:** 2026-03-17
+**Core Value:** Los datos del usuario deben ser confiables (sin duplicaciones ni pérdida) y estar protegidos con backup en la nube.
+
+## v1 Requirements
+
+### Bug Fixes
+
+- [ ] **BUG-01**: Backfill logic debe contar espontáneos al evaluar si una fecha ya tiene assignments, evitando duplicación de habits regulares
+- [ ] **BUG-02**: Future-date guard extraído a utility `isFutureDate()` usado desde ambos call sites (addAssignmentForHabit y ensureAssignmentsForDate)
+- [ ] **BUG-03**: Backfill date iteration usa UTC explícito para evitar drift de ±1 día por timezone
+- [ ] **BUG-04**: Categorías de espontáneos validadas contra VALID_AREA_IDS antes de insertar en DB
+
+### Tech Debt
+
+- [ ] **DEBT-01**: useSpeechRecognition tiene interfaz tipada para SpeechModule (eliminar `any`)
+- [ ] **DEBT-02**: Todo JSON parsing de categorías centralizado en `parsing.ts` con validación contra VALID_AREA_IDS
+- [ ] **DEBT-03**: sanitizeTable tiene tipos explícitos por tabla y SQL concatenado documentado o refactoreado a funciones específicas
+
+### Google Drive Backup
+
+- [ ] **DRIVE-01**: Usuario puede autenticarse con Google usando expo-auth-session con scope drive.file
+- [ ] **DRIVE-02**: Usuario puede subir backup completo a Google Drive con un botón manual
+- [ ] **DRIVE-03**: Archivos de backup nombrados con fecha (cozyhabits-YYYY-MM-DD.json)
+- [ ] **DRIVE-04**: Usuario puede ver lista de backups en Drive y seleccionar uno para restaurar
+- [ ] **DRIVE-05**: Usuario puede restaurar datos desde un backup de Google Drive (reemplaza datos locales con confirmación)
+- [ ] **DRIVE-06**: Usuario ve timestamp del último backup exitoso en la pantalla de settings
+- [ ] **DRIVE-07**: Usuario puede desconectar su cuenta de Google (sign out + revocar acceso)
+- [ ] **DRIVE-08**: Errores de Drive (quota, auth, red) se muestran al usuario con mensaje accionable
+
+## v2 Requirements
+
+### Cloud Backup Improvements
+
+- **DRIVE-V2-01**: Backup automático periódico (diario o al cerrar app)
+- **DRIVE-V2-02**: Mostrar tamaño del backup en Drive
+- **DRIVE-V2-03**: Backup encryption antes de subir a Drive
+
+### Testing
+
+- **TEST-V2-01**: Tests para spontaneous habit handling completo
+- **TEST-V2-02**: Tests para mood/reflection lifecycle
+- **TEST-V2-03**: Tests para historical date editing
+
+### Performance
+
+- **PERF-V2-01**: Memoización de groupByFrequency en DailySheetScreen
+- **PERF-V2-02**: Cache de stats entre cambios de mes
+- **PERF-V2-03**: Sanitización de categorías via SQL en vez de JavaScript
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Sync bidireccional real-time | Complejidad desproporcionada — requiere conflict resolution, server infra |
+| Multi-cloud (Dropbox, iCloud) | Cada provider tiene SDK y auth diferente, bajo ROI en v1 |
+| Import desde otras apps | Schemas diferentes, mapping frágil |
+| Import desde CSV | Ambigüedad de parsing (formatos de fecha, categorías) |
+| Merge on restore | Conflict resolution complejo; full replace es explícito y predecible |
+| Migración de chart library | Funciona, no es crítico |
+| Backup encryption | Se evalúa después de cloud backup funcional |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| BUG-01 | — | Pending |
+| BUG-02 | — | Pending |
+| BUG-03 | — | Pending |
+| BUG-04 | — | Pending |
+| DEBT-01 | — | Pending |
+| DEBT-02 | — | Pending |
+| DEBT-03 | — | Pending |
+| DRIVE-01 | — | Pending |
+| DRIVE-02 | — | Pending |
+| DRIVE-03 | — | Pending |
+| DRIVE-04 | — | Pending |
+| DRIVE-05 | — | Pending |
+| DRIVE-06 | — | Pending |
+| DRIVE-07 | — | Pending |
+| DRIVE-08 | — | Pending |
+
+**Coverage:**
+- v1 requirements: 15 total
+- Mapped to phases: 0
+- Unmapped: 15 ⚠️
+
+---
+*Requirements defined: 2026-03-17*
+*Last updated: 2026-03-17 after initial definition*
