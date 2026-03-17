@@ -21,7 +21,7 @@ Este milestone parte de correctness: cuatro bugs en el sistema de daily assignme
   2. La función `isFutureDate()` existe como utility compartida y ambos call sites (addAssignmentForHabit y ensureAssignmentsForDate) la invocan desde el mismo lugar
   3. La iteración de fechas en el backfill produce la misma fecha en cualquier timezone (UTC explícito en el constructor de Date)
   4. Insertar un habit espontáneo con categoría inválida falla con error descriptivo en vez de persistir un ID de área inexistente en la DB
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 01-01: Fix backfill spontaneous guard, extract isFutureDate utility, fix UTC date iteration
