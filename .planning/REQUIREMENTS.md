@@ -65,27 +65,27 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | — | Pending |
-| BUG-02 | — | Pending |
-| BUG-03 | — | Pending |
-| BUG-04 | — | Pending |
-| DEBT-01 | — | Pending |
-| DEBT-02 | — | Pending |
-| DEBT-03 | — | Pending |
-| DRIVE-01 | — | Pending |
-| DRIVE-02 | — | Pending |
-| DRIVE-03 | — | Pending |
-| DRIVE-04 | — | Pending |
-| DRIVE-05 | — | Pending |
-| DRIVE-06 | — | Pending |
-| DRIVE-07 | — | Pending |
-| DRIVE-08 | — | Pending |
+| BUG-01 | Phase 1 | Pending |
+| BUG-02 | Phase 1 | Pending |
+| BUG-03 | Phase 1 | Pending |
+| BUG-04 | Phase 1 | Pending |
+| DEBT-01 | Phase 2 | Pending |
+| DEBT-02 | Phase 2 | Pending |
+| DEBT-03 | Phase 2 | Pending |
+| DRIVE-01 | Phase 3 | Pending |
+| DRIVE-02 | Phase 3 | Pending |
+| DRIVE-03 | Phase 3 | Pending |
+| DRIVE-04 | Phase 3 | Pending |
+| DRIVE-05 | Phase 3 | Pending |
+| DRIVE-06 | Phase 3 | Pending |
+| DRIVE-07 | Phase 3 | Pending |
+| DRIVE-08 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️
+- Mapped to phases: 15
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 after roadmap creation*
