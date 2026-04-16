@@ -30,6 +30,10 @@ export function getTodayPrefix(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+export function isFutureDate(datePrefix: string): boolean {
+  return datePrefix > getTodayPrefix();
+}
+
 export function getNowTimestamp(): string {
   return new Date().toISOString().replace('T', ' ').slice(0, 19);
 }

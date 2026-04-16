@@ -7,7 +7,7 @@
  * Delega acceso a datos a los repositorios.
  */
 
-import { getTodayPrefix, getTimestampForDate, getNowTimestamp } from './db';
+import { getTodayPrefix, getTimestampForDate, getNowTimestamp, isFutureDate } from './db';
 import * as assignmentRepo from '../repositories/assignmentRepository';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
@@ -113,6 +113,7 @@ export async function addAssignmentForHabit(
   datePrefix?: string,
 ): Promise<void> {
   const day = datePrefix ?? getTodayPrefix();
+  if (isFutureDate(day)) return;
   const existing = await assignmentRepo.findByHabitAndDate(habitId, day);
   if (existing) return;
 
@@ -178,13 +179,13 @@ export async function checkAndBackfillHistory(): Promise<void> {
 
   // Rellenar desde el día siguiente al último registrado hasta hoy
   const start = nextDay(latestDate);
-  const end = new Date(`${today}T00:00:00`);
+  const end = new Date(`${today}T00:00:00Z`);
 
-  const current = new Date(`${start}T00:00:00`);
+  const current = new Date(`${start}T00:00:00Z`);
   while (current <= end) {
     const dateStr = formatDateStr(current);
     await ensureAssignmentsForDate(dateStr);
-    current.setDate(current.getDate() + 1);
+    current.setUTCDate(current.getUTCDate() + 1);
   }
 }
 
@@ -196,6 +197,7 @@ export async function checkAndBackfillHistory(): Promise<void> {
  * Cruza con performed_habits existentes para marcar completados.
  */
 export async function ensureAssignmentsForDate(datePrefix: string): Promise<void> {
+  if (isFutureDate(datePrefix)) return;
   const existing = await assignmentRepo.countByDate(datePrefix);
   if (existing > 0) return;
 
@@ -243,8 +245,8 @@ function enrichAssignments(
 }
 
 export function nextDay(dateStr: string): string {
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setDate(d.getDate() + 1);
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
   return formatDateStr(d);
 }
 
