@@ -25,7 +25,7 @@ Este milestone parte de correctness: cuatro bugs en el sistema de daily assignme
 
 Plans:
 - [x] 01-01: Fix backfill spontaneous guard, extract isFutureDate utility, fix UTC date iteration
-- [ ] 01-02: Add category validation against VALID_AREA_IDS on spontaneous habit insert
+- [x] 01-02: Add category validation against VALID_AREA_IDS on spontaneous habit insert
 
 ### Phase 2: Tech Debt
 **Goal**: El codebase tiene tipos explícitos y un único punto de parsing de categorías — sin `any`, sin `as` assertions, sin JSON.parse disperso
