@@ -45,6 +45,9 @@ const SQL_FIND_BY_HABIT_AND_DATE =
 const SQL_DELETE_UNCOMPLETED_BY_HABIT_AND_DATE =
   'DELETE FROM daily_assignments WHERE habit_id = ? AND date = ? AND is_completed = 0';
 
+const SQL_UPDATE_SNAPSHOT =
+  'UPDATE daily_assignments SET snapshot_name = ?, snapshot_points = ?, snapshot_categories = ?, snapshot_frequency = ? WHERE habit_id = ? AND date = ? AND is_completed = 0';
+
 // ─── Consultas ──────────────────────────────────────────────────────
 
 /** Todas las asignaciones para una fecha (YYYY-MM-DD). */
@@ -139,6 +142,22 @@ export async function setCompleted(id: string, completed: boolean): Promise<void
 export async function deleteById(id: string): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(SQL_DELETE, [id]);
+}
+
+/** Actualiza el snapshot de asignaciones no completadas para un hábito en una fecha. */
+export async function updateSnapshot(
+  habitId: string,
+  datePrefix: string,
+  snapshotName: string,
+  snapshotPoints: number,
+  snapshotCategories: string,
+  snapshotFrequency: string,
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(SQL_UPDATE_SNAPSHOT, [
+    snapshotName, snapshotPoints, snapshotCategories, snapshotFrequency,
+    habitId, datePrefix,
+  ]);
 }
 
 /** Elimina la asignación no completada de un hábito en una fecha (solo hoy). */

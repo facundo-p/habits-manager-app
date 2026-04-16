@@ -139,6 +139,26 @@ export async function removeAssignmentForHabit(
   await assignmentRepo.deleteUncompletedByHabitAndDate(habitId, day);
 }
 
+/**
+ * Actualiza el snapshot del día de hoy para un hábito editado.
+ * Solo afecta asignaciones no completadas — las ya completadas preservan
+ * el snapshot del momento en que se completaron.
+ */
+export async function updateTodaySnapshotForHabit(habitId: string): Promise<void> {
+  const today = getTodayPrefix();
+  const habit = await habitRepo.findById(habitId);
+  if (!habit) return;
+
+  await assignmentRepo.updateSnapshot(
+    habitId,
+    today,
+    habit.name,
+    habit.base_points,
+    habit.default_categories,
+    habit.frequency,
+  );
+}
+
 // ─── Backfill (integridad histórica) ────────────────────────────────
 
 /**
@@ -222,7 +242,7 @@ function enrichAssignments(
   }));
 }
 
-function nextDay(dateStr: string): string {
+export function nextDay(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00`);
   d.setDate(d.getDate() + 1);
   return formatDateStr(d);
