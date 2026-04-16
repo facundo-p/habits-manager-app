@@ -40,6 +40,7 @@ import {
   removeAssignmentForHabit,
   updateTodaySnapshotForHabit,
   checkAndBackfillHistory,
+  addSpontaneous,
   nextDay,
 } from '../services/assignmentService';
 
@@ -389,5 +390,31 @@ describe('BUG-03: UTC-safe date iteration', () => {
 
   test('nextDay works across year boundary', () => {
     expect(nextDay('2026-12-31')).toBe('2027-01-01');
+  });
+});
+
+// ─── addSpontaneous — BUG-04: category validation ────────────────────────────
+
+describe('addSpontaneous — BUG-04: category validation', () => {
+  test('BUG-04: throws descriptive error when categories contain invalid ID', async () => {
+    await expect(addSpontaneous('Test', ['invalid_area_id']))
+      .rejects.toThrow(/invalid_area_id/);
+  });
+
+  test('BUG-04: throws error listing ALL invalid IDs', async () => {
+    await expect(addSpontaneous('Test', ['salud_fisica', 'fake_id']))
+      .rejects.toThrow(/fake_id/);
+  });
+
+  test('BUG-04: succeeds with all valid categories', async () => {
+    await expect(addSpontaneous('Logro', ['salud_fisica', 'mental']))
+      .resolves.toBeUndefined();
+
+    expect(countAssignments(TODAY)).toBe(1);
+  });
+
+  test('BUG-04: succeeds with empty categories array', async () => {
+    await expect(addSpontaneous('Logro', []))
+      .resolves.toBeUndefined();
   });
 });
