@@ -24,7 +24,7 @@ Este milestone parte de correctness: cuatro bugs en el sistema de daily assignme
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: Fix backfill spontaneous guard, extract isFutureDate utility, fix UTC date iteration
+- [x] 01-01: Fix backfill spontaneous guard, extract isFutureDate utility, fix UTC date iteration
 - [ ] 01-02: Add category validation against VALID_AREA_IDS on spontaneous habit insert
 
 ### Phase 2: Tech Debt
