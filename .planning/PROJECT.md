@@ -24,10 +24,10 @@ Los datos del usuario deben ser confiables (sin duplicaciones ni pérdida) y est
 
 ### Active
 
-- [ ] Fix: backfill logic debe considerar espontáneos al contar assignments por fecha
-- [ ] Fix: eliminar duplicación de check de fecha futura en assignmentService
-- [ ] Fix: validar categorías contra VALID_AREA_IDS antes de insertar espontáneos
-- [ ] Fix: timezone — usar UTC explícito en backfill date calculation
+- ✓ Fix: backfill logic debe considerar espontáneos al contar assignments por fecha — Validated in Phase 1: Bug Fixes
+- ✓ Fix: eliminar duplicación de check de fecha futura en assignmentService — Validated in Phase 1: Bug Fixes
+- ✓ Fix: validar categorías contra VALID_AREA_IDS antes de insertar espontáneos — Validated in Phase 1: Bug Fixes
+- ✓ Fix: timezone — usar UTC explícito en backfill date calculation — Validated in Phase 1: Bug Fixes
 - [ ] Tech debt: type safety en useSpeechRecognition (eliminar `any`)
 - [ ] Tech debt: centralizar JSON parsing de categorías en un solo punto
 - [ ] Tech debt: tipar resultados de sanitizeTable (eliminar `[key: string]: any`)
@@ -67,4 +67,4 @@ Los datos del usuario deben ser confiables (sin duplicaciones ni pérdida) y est
 | Excluir performance optimizations | Funcional en devices actuales, priorizar correctness | — Pending |
 
 ---
-*Last updated: 2026-03-17 after initialization*
+*Last updated: 2026-04-21 after Phase 1: Bug Fixes completion*
