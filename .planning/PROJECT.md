@@ -28,10 +28,10 @@ Los datos del usuario deben ser confiables (sin duplicaciones ni pérdida) y est
 - ✓ Fix: eliminar duplicación de check de fecha futura en assignmentService — Validated in Phase 1: Bug Fixes
 - ✓ Fix: validar categorías contra VALID_AREA_IDS antes de insertar espontáneos — Validated in Phase 1: Bug Fixes
 - ✓ Fix: timezone — usar UTC explícito en backfill date calculation — Validated in Phase 1: Bug Fixes
-- [ ] Tech debt: type safety en useSpeechRecognition (eliminar `any`)
-- [ ] Tech debt: centralizar JSON parsing de categorías en un solo punto
-- [ ] Tech debt: tipar resultados de sanitizeTable (eliminar `[key: string]: any`)
-- [ ] Tech debt: documentar seguridad de SQL concatenado en sanitizeTable o refactorear a funciones explícitas
+- ✓ Tech debt: type safety en useSpeechRecognition (eliminar `any`) — Validated in Phase 2: Tech Debt
+- ✓ Tech debt: centralizar JSON parsing de categorías en un solo punto — Validated in Phase 2: Tech Debt
+- ✓ Tech debt: tipar resultados de sanitizeTable (eliminar `[key: string]: any`) — Validated in Phase 2: Tech Debt
+- ✓ Tech debt: documentar seguridad de SQL concatenado en sanitizeTable o refactorear a funciones explícitas — Validated in Phase 2: Tech Debt (refactor a funciones explícitas con SQL estático)
 - [ ] Cloud backup: export/import de datos a Google Drive
 
 ### Out of Scope
@@ -67,4 +67,4 @@ Los datos del usuario deben ser confiables (sin duplicaciones ni pérdida) y est
 | Excluir performance optimizations | Funcional en devices actuales, priorizar correctness | — Pending |
 
 ---
-*Last updated: 2026-04-21 after Phase 1: Bug Fixes completion*
+*Last updated: 2026-04-27 after Phase 2: Tech Debt completion — codebase ahora con tipos explícitos (cero `any` y cero `as` casts en useSpeechRecognition/backupService) y un único punto de parsing+validación de categorías (`parseAndValidateCategories`). Próximo: Phase 3 Google Drive Backup.*
