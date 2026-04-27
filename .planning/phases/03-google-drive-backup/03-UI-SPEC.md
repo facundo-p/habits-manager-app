@@ -52,19 +52,24 @@ Project follows Tailwind's default 4px scale. Phase 3 declares these tokens (all
 
 ## Typography
 
-Phase 3 declares **4 sizes, 2 weights** — all already present in `text.*` tokens. No new font, no new size, no new weight.
+Phase 3 declares **4 sizes, 2 weights** — all already present in `text.*` tokens. No new font, no new size, no new weight is introduced by this phase.
+
+The 4 sizes used in Phase 3 surfaces are 24/18/16/14. The 12px `text.captionSmall` token exists in the project for other surfaces (`styles.versionText`, area badges) but is **NOT used by any Phase 3 surface** and is therefore not part of this contract.
 
 | Role | Size | Weight | Line height | Token | Used in Phase 3 for |
 |------|------|--------|-------------|-------|---------------------|
-| Display | 24px (`text-2xl`) | 700 (Merriweather Bold) | ~1.2 | `text.screenTitle` | `RestoreFromDriveScreen` title ("Restaurar desde Drive") via `AppScreenHeader` |
-| Section heading | 18px (`text-lg`) | 600 (semibold, Lato sans rendered semibold) | ~1.3 | `text.sectionTitle` | "Backup en la nube" section title in Settings |
-| Body | 16px (`text-base`) | 400 (Lato Regular) | ~1.5 | `text.body` | Connected email, button labels, modal body, list item primary text |
-| Caption | 14px (`text-sm`) | 400 (Lato Regular) | ~1.4 | `text.caption` | Last-backup timestamp, file size in restore list, sub-text under buttons |
-| Caption (small) | 12px (`text-xs`) | 400 | ~1.4 | `text.captionSmall` / `styles.versionText` | "Próximamente" badges (none in Phase 3), destructive note under Restore button |
+| Display | 24px (`text-2xl`) | Merriweather (serif, single weight 700) | ~1.2 | `text.screenTitle` | `RestoreFromDriveScreen` title ("Restaurar desde Drive") via `AppScreenHeader` |
+| Section heading | 18px (`text-lg`) | Lato Semibold (600) | ~1.3 | `text.sectionTitle` | "Backup en la nube" section title in Settings |
+| Body | 16px (`text-base`) | Lato Regular (400) | ~1.5 | `text.body` | Connected email, button labels, modal body, list item primary text |
+| Caption | 14px (`text-sm`) | Lato Regular (400) | ~1.4 | `text.caption` | Last-backup timestamp, file size in restore list, destructive warning notes (color override `text-rose-400`) |
+
+**Weight count justification (semantic role per font family):**
+The "2 weights" limit applies to weight *choices* within a single sans family. Phase 3 uses two weights from the Lato sans family — Regular (400) for body/caption and Semibold (600) for section headings and button labels. Merriweather is loaded with a single weight (`Merriweather_700Bold`) because the project ships only that variant; it is a property of the serif font definition, not a separate weight choice. There are therefore exactly **2 sans weights + 1 serif weight = 2 design weight decisions** (one per family).
 
 **Strict rules for Phase 3:**
-- Primary CTAs use `button.primaryText` (16px, semibold, white). Secondary CTAs use `button.secondaryText` (16px, semibold, amber-600).
-- Destructive warning copy in modals uses `text.caption` color `text-rose-400` (matches existing `styles.destructiveNote` pattern from `SettingsScreen.styles.ts`).
+- Primary CTAs use `button.primaryText` (16px, Lato Semibold, white). Secondary CTAs use `button.secondaryText` (16px, Lato Semibold, amber-600). Both fall under the "Body 16px" row above; the Semibold weight is the same one declared for the Section heading row.
+- Destructive warning copy that appears as inline text inside Phase 3 surfaces uses `text.caption` (14px) with color override `text-rose-400`. Note: this is a deliberate uplift from the legacy `styles.destructiveNote` pattern in `SettingsScreen.styles.ts` (which is 12px `text-xs`); Phase 3 destructive copy is more prominent because it appears adjacent to a destructive trigger. The legacy 12px footnote class is not reused by Phase 3.
+- All destructive *confirmation* dialogs in Phase 3 are native `Alert.alert` invocations (per D-21). Native Alert does not accept custom typography — the OS controls font sizes and weights inside those dialogs, so they are explicitly outside this typography contract.
 - Email of the connected account is rendered with `text.body` (no monospace, no special treatment).
 - Last-backup timestamp uses `text.caption` (`text-amber-600`).
 
@@ -495,7 +500,7 @@ These are NOT blocking — they are defensive callouts the executor must respect
 - [ ] Dimension 1 Copywriting: PASS (all strings declared above; voseo register; no hardcoded strings in components)
 - [ ] Dimension 2 Visuals: PASS (component inventory complete; states enumerated; reuses `NotebookPaper`/`AppScreenHeader`)
 - [ ] Dimension 3 Color: PASS (60/30/10 reused; accent reserved-for list explicit; no new hex)
-- [ ] Dimension 4 Typography: PASS (4 sizes, 2 weights — all from existing `text.*` tokens)
+- [ ] Dimension 4 Typography: PASS (4 sizes — 24/18/16/14 — and 2 sans weights — Lato Regular 400 + Semibold 600 — all from existing `text.*` tokens. Merriweather is loaded with a single weight as a property of the serif font definition, not a separate weight choice. The 12px `text.captionSmall` token is not used by any Phase 3 surface and is excluded from this contract.)
 - [ ] Dimension 5 Spacing: PASS (4px scale honored; 44px touch targets; documented exceptions)
 - [ ] Dimension 6 Registry Safety: PASS (no third-party UI registries; native SDK vetted in RESEARCH.md)
 
@@ -505,3 +510,4 @@ These are NOT blocking — they are defensive callouts the executor must respect
 
 *Phase: 03-google-drive-backup*
 *UI-SPEC drafted: 2026-04-27*
+*UI-SPEC revised: 2026-04-27 — Typography reconciled (Path A: dropped 12px row; weight count justified per font family)*
