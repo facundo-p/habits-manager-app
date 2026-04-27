@@ -637,17 +637,19 @@ Claude tiene discreción sobre si usar type guards inline o un helper `isRecord(
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **¿Dónde exportar el helper de validación de escritura?**
    - What we know: D-15 requiere validar `categories` en `createHabit`/`updateHabit`. La lógica es `filter(!VALID_AREA_IDS.has(id))`.
    - What's unclear: Si este helper debe ser un export de `parsing.ts` (para reutilización en BUG-04) o vivir inline en `habitService`.
    - Recommendation: **Claude's discretion** — si BUG-04 ya implementó validación similar en Phase 1, revisar `assignmentService.ts` para reutilizar el mismo patrón. Si BUG-04 tiene validación inline, mantener consistencia.
+   - **RESOLVED (2026-04-26):** La validación vive inline en `habitService.createHabit`/`updateHabit` siguiendo el patrón de `assignmentService.ts:91-97` (BUG-04). No se exporta a `parsing.ts`. Implementado por 02-01 Task 3.
 
 2. **¿`parseAndValidateCategories` debe manejar `null | undefined`?**
    - What we know: Los call sites actuales reciben `string` (Habit.default_categories es `string`, categories en DailyItem es `string`). `db.getAllAsync` puede retornar `null` para columnas nullable.
    - What's unclear: Si la firma debe ser `(json: string | null | undefined): string[]` para ser más defensiva en las funciones de sanitización.
    - Recommendation: Mantener `(json: string): string[]` para los 4 call sites de UI/service. Las funciones de sanitización hacen el null-check antes de llamar al parser (el `if (row.X == null) continue` en el código propuesto lo maneja).
+   - **RESOLVED (2026-04-26):** La firma queda `(json: string): string[]`. Las funciones de sanitización en `db.ts` hacen `if (row.X == null) continue` antes de invocar al parser. Implementado por 02-01 Task 2 (firma) y 02-02 Task 2 (null-check en sanitizers).
 
 ---
 
