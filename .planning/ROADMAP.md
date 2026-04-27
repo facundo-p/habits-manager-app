@@ -39,8 +39,8 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Wave 0 test stubs + parser central parseAndValidateCategories + write-time category validation in habitService (D-15)
-- [ ] 02-02-PLAN.md — Migrate 4 call sites to parseAndValidateCategories + replace sanitizeTable with sanitizeHabitDefaultCategories and sanitizePerformedCategoriesUsed (static SQL, typed shapes)
-- [ ] 02-03-PLAN.md — Type useSpeechRecognition with SpeechModuleInterface (eliminate two any) + remove as Partial<BackupData> casts from backupService.parseAndValidate (D-04)
+- [x] 02-02-PLAN.md — Migrate 4 call sites to parseAndValidateCategories + replace sanitizeTable with sanitizeHabitDefaultCategories and sanitizePerformedCategoriesUsed (static SQL, typed shapes)
+- [x] 02-03-PLAN.md — Type useSpeechRecognition with SpeechModuleInterface (eliminate two any) + remove as Partial<BackupData> casts from backupService.parseAndValidate (D-04)
 
 ### Phase 3: Google Drive Backup
 **Goal**: El usuario puede hacer backup de sus datos a Google Drive y restaurarlos desde cualquier dispositivo, con control explícito y mensajes de error accionables
