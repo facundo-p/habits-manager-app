@@ -13,10 +13,26 @@ import { Alert } from 'react-native';
 import { ALERT_VOICE_UNAVAILABLE } from '../config/constants';
 import { useSettingsStore } from '../store/useSettingsStore';
 
-let SpeechModule: any = null;
+// Interfaces locales — no importar del paquete (puede no estar instalado en runtime).
+// Solo se tipa la superficie usada por el hook (D-11).
+interface SpeechRecognitionEvent {
+  results?: Array<{ transcript: string }>;
+}
+
+interface SpeechModuleInterface {
+  addResultListener(
+    cb: (event: SpeechRecognitionEvent) => void,
+  ): { remove(): void } | undefined;
+  ExpoSpeechRecognitionModule?: {
+    start(opts: { lang: string }): Promise<void>;
+    stop(): Promise<void>;
+  };
+}
+
+let SpeechModule: SpeechModuleInterface | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  SpeechModule = require('expo-speech-recognition');
+  SpeechModule = require('expo-speech-recognition') as SpeechModuleInterface;
 } catch {
   // Módulo no disponible
 }
@@ -38,7 +54,7 @@ export function useSpeechRecognition(onPartialResult: (text: string) => void) {
 
   useEffect(() => {
     if (!SpeechModule) return;
-    const sub = SpeechModule.addResultListener?.((event: any) => {
+    const sub = SpeechModule.addResultListener?.((event: SpeechRecognitionEvent) => {
       const transcript = event?.results?.[0]?.transcript ?? '';
       if (transcript) callbackRef.current(transcript);
     });
