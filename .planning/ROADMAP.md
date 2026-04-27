@@ -35,10 +35,12 @@ Plans:
   1. `useSpeechRecognition` tiene una interfaz `SpeechModuleInterface` tipada y no contiene ningún `any` explícito
   2. Todo JSON parsing de categorías pasa por `parseAndValidateCategories()` en `parsing.ts` — no hay llamadas directas a `JSON.parse` para arrays de categorías en otros archivos
   3. `sanitizeTable` retorna tipos explícitos por tabla (sin `[key: string]: any`) y el SQL concatenado está documentado o reemplazado por funciones específicas por tabla
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Type useSpeechRecognition, centralize category JSON parsing, type sanitizeTable results
+- [ ] 02-01-PLAN.md — Wave 0 test stubs + parser central parseAndValidateCategories + write-time category validation in habitService (D-15)
+- [ ] 02-02-PLAN.md — Migrate 4 call sites to parseAndValidateCategories + replace sanitizeTable with sanitizeHabitDefaultCategories and sanitizePerformedCategoriesUsed (static SQL, typed shapes)
+- [ ] 02-03-PLAN.md — Type useSpeechRecognition with SpeechModuleInterface (eliminate two any) + remove as Partial<BackupData> casts from backupService.parseAndValidate (D-04)
 
 ### Phase 3: Google Drive Backup
 **Goal**: El usuario puede hacer backup de sus datos a Google Drive y restaurarlos desde cualquier dispositivo, con control explícito y mensajes de error accionables
@@ -65,5 +67,5 @@ Phases execute in order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Bug Fixes | 0/2 | Not started | - |
-| 2. Tech Debt | 0/1 | Not started | - |
+| 2. Tech Debt | 0/3 | Not started | - |
 | 3. Google Drive Backup | 0/3 | Not started | - |
