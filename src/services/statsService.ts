@@ -8,8 +8,7 @@
  * Las firmas públicas NO cambian (contrato con StatsScreen).
  */
 
-import { VALID_AREA_IDS } from '../config/constants';
-import { parseJsonArray } from '../utils/parsing';
+import { parseAndValidateCategories } from '../utils/parsing';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
 import * as assignmentRepo from '../repositories/assignmentRepository';
@@ -112,8 +111,8 @@ function buildHeatmapFromAssignments(
 }
 
 /**
- * Agrega puntos por categoría, deduplicando IDs dentro de cada registro
- * y filtrando categorías que no existan en HABIT_AREAS (VALID_AREA_IDS).
+ * Agrega puntos por categoría, deduplicando IDs dentro de cada registro.
+ * El filtrado contra VALID_AREA_IDS lo hace `parseAndValidateCategories`.
  */
 function aggregateByCategory(
   rows: { categories_used: string; points_earned: number }[],
@@ -121,8 +120,7 @@ function aggregateByCategory(
   const map: Record<string, number> = {};
 
   for (const row of rows) {
-    const rawCats = parseJsonArray(row.categories_used);
-    const cats = [...new Set(rawCats)].filter((id) => VALID_AREA_IDS.has(id as never));
+    const cats = [...new Set(parseAndValidateCategories(row.categories_used))];
     const share = row.points_earned / Math.max(cats.length, 1);
     for (const cat of cats) {
       map[cat] = (map[cat] ?? 0) + share;

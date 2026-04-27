@@ -16,7 +16,7 @@ import { AreaInfoModal } from './AreaInfoModal';
 import { AreaPicker } from '../shared/AreaPicker';
 import { styles } from './HabitFormModal.styles';
 import type { Habit, HabitFormData, HabitArea } from '../../types';
-import { parseJsonArray } from '../../utils/parsing';
+import { parseAndValidateCategories } from '../../utils/parsing';
 
 interface HabitFormModalProps {
   visible: boolean;
@@ -175,7 +175,7 @@ function populateForm(
   setName(habit.name);
   setFreq(habit.frequency);
   setPts(habit.base_points);
-  setCats(parseJsonArray(habit.default_categories));
+  setCats(parseAndValidateCategories(habit.default_categories));
 }
 
 function resetForm(
