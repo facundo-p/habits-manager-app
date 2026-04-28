@@ -89,6 +89,11 @@ export async function signIn(): Promise<{ email: string } | null> {
     if (code === statusCodes.SIGN_IN_CANCELLED) {
       return null;
     }
+    // IN-03: mapear errores de red durante el sign-in interactivo a NO_NETWORK
+    // (en vez de genérico) para que la UI muestre el alert correcto.
+    if (err instanceof TypeError && /network/i.test(err.message)) {
+      throw new DriveError(ALERT_DRIVE_NO_NETWORK, err);
+    }
     throw new DriveError(ALERT_DRIVE_GENERIC, err);
   }
 }

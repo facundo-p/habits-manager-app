@@ -84,6 +84,24 @@ describe('driveBackupService', () => {
       const result = await signIn();
       expect(result).toBeNull();
     });
+
+    test('TypeError network → DriveError(NO_NETWORK) (IN-03)', async () => {
+      (GoogleSignin.signIn as jest.Mock).mockRejectedValueOnce(
+        new TypeError('Network request failed'),
+      );
+      await expect(signIn()).rejects.toMatchObject({
+        alert: ALERT_DRIVE_NO_NETWORK,
+      });
+    });
+
+    test('error genérico (no cancelled, no network) → DriveError(GENERIC) (IN-03)', async () => {
+      (GoogleSignin.signIn as jest.Mock).mockRejectedValueOnce(
+        new Error('something else'),
+      );
+      await expect(signIn()).rejects.toMatchObject({
+        alert: ALERT_DRIVE_GENERIC,
+      });
+    });
   });
 
   describe('signOut', () => {
