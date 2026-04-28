@@ -13,7 +13,8 @@
       "backgroundColor": "#fffbeb"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.facupich.cozyhabit"
     },
     "android": {
       "package": "com.facupich.cozyhabit",
@@ -27,7 +28,13 @@
     },
     "plugins": [
       "expo-font",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.PLACEHOLDER_REVERSED_IOS_CLIENT_ID"
+        }
+      ]
     ],
     "extra": {
       "eas": {
