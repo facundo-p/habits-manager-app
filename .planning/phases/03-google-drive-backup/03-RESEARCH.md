@@ -956,32 +956,39 @@ export function computeFilesToDelete(
 | A7 | El usuario tiene EAS account configurado y al menos un build profile de development funcional | Environment Availability | Si no: bloqueador real, plan 03-01 incluye checklist explícito. |
 | A8 | La cuenta Google de testing tiene Drive habilitado (default), sin restricciones org Workspace | UAT | Si tiene restricciones, los scopes pueden ser bloqueados por admin. User → cuenta personal Gmail. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All questions raised during research were resolved during planning (CONTEXT.md decisions + plan 03-01..03-03). Status snapshot recorded for traceability.
 
 1. **¿Cómo manejar el cleanup del cache `cozyhabits-pre-restore-*.json` (D-19)?**
    - What we know: D-19 establece la creación; CONTEXT marca el cleanup como Claude's discretion.
    - What's unclear: si limpiar al próximo restore exitoso, después de N días, o nunca (en cuyo caso el sistema lo limpia eventualmente).
    - Recommendation: limpiar al próximo restore exitoso (mantener el último siempre como red de seguridad). Plan 03-03 decide.
+   - **RESOLVED:** silent cleanup en el próximo restore exitoso. Implementado en plan 03-03 Task 1 (`cleanupOldPreRestoreCache()` corre tras `restoreData()` exitoso, no antes — alineado con UI-SPEC §Component Inventory). El último cache se preserva siempre como red de seguridad.
 
 2. **¿La sección "Cloud backup" en Settings va separada o fusionada con "Seguridad y Datos"?**
    - What we know: D-23 lo deja a Claude con UI snapshot.
    - What's unclear: separada (más explícita) vs fusionada (menos clutter).
    - Recommendation: nueva sección separada arriba de "Seguridad y Datos" — más clara para el user. Plan 03-03 produce UI spec.
+   - **RESOLVED:** sección separada "Backup en la nube" entre "Personalización" y "Seguridad y Datos" (UI-SPEC §1 + plan 03-02 Task 3 acceptance criterion verifica el orden con grep).
 
 3. **¿Modal expandible vs nueva pantalla para restore list?**
    - What we know: D-17/D-18 piden lista + preview + confirm.
    - What's unclear: forma exacta del flow.
    - Recommendation: nueva pantalla `RestoreFromDriveScreen` con `AppScreenHeader` + `FlatList` (consistente con resto de la app que usa screens en el stack). Modal anidado para preview. Plan 03-03 produce UI spec.
+   - **RESOLVED:** nueva pantalla `RestoreFromDriveScreen` registrada como `Stack.Screen` en App.tsx (plan 03-02 Task 3 scaffold + plan 03-03 Task 2 fills body). Preview se hace inline vía `prepareRestore(fileId)` (single download, ver fix de plan 03-03 abajo) + Alert nativo de confirmación destructivo.
 
 4. **¿`offlineAccess: true` o `false` en `GoogleSignin.configure()`?**
    - What we know: app no tiene server backend; el SDK refresca tokens internamente.
    - What's unclear: con `offlineAccess: true` el SDK pide un `serverAuthCode` que no se usa.
    - Recommendation: `offlineAccess: false` — minimiza data requested al user en consent screen.
+   - **RESOLVED:** `offlineAccess: false`. Implementado en plan 03-01 Task 4 (`googleAuth.ts` → `GoogleSignin.configure({ ..., offlineAccess: false })`).
 
 5. **¿UAT en iOS y Android, o sólo uno?**
    - What we know: app es cross-platform; bug de `getTokens()` sólo en Android; bug de Alert sólo en Android.
    - What's unclear: capacidad del user de testear ambos.
    - Recommendation: UAT en Android obligatorio (donde están los bugs); iOS si dispositivo disponible. Documentar en plan 03-03.
+   - **RESOLVED:** Android UAT obligatorio (cubre los 2 bugs Android-specific: `getTokens()` cached y `Alert.alert` post sign-in). iOS UAT opcional. Documentado en VALIDATION.md §Manual-Only Verifications.
 
 ## Sources
 
