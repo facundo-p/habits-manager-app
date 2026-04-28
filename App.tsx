@@ -20,7 +20,9 @@ import { ROUTES } from './src/config/constants';
 import { tabBarTheme, iconDefaults, colors } from './src/styles/ui.styles';
 import { initDatabase } from './src/services/db';
 import { checkAndBackfillHistory } from './src/services/assignmentService';
+import { configureGoogleSignin, silentSignInIfPossible } from './src/services/googleAuth';
 import { useHabitStore } from './src/store/useHabitStore';
+import { useSettingsStore } from './src/store/useSettingsStore';
 import type { RootStackParamList, RootTabParamList } from './src/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -101,6 +103,17 @@ export default function App() {
       .then(() => checkAndBackfillHistory())
       .then(() => console.log('DB inicializada y backfill completado'))
       .catch((err) => console.error('Error inicializando DB:', err));
+  }, []);
+
+  useEffect(() => {
+    configureGoogleSignin();
+    silentSignInIfPossible()
+      .then((session) => {
+        if (session) {
+          useSettingsStore.getState().setGoogleEmail(session.email);
+        }
+      })
+      .catch((err) => console.error('[App] silent sign-in unexpected error:', err));
   }, []);
 
   useEffect(() => {
