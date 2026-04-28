@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Plan 03-01 closed (OAuth GCP-Console setup deferred)
-last_updated: "2026-04-28T00:00:00.000Z"
-last_activity: 2026-04-28 -- Plan 03-01 cerrado code-complete; runtime auth blocked hasta user setup
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-04-28T03:19:35.819Z"
+last_activity: 2026-04-28
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 8
-  completed_plans: 6
-  percent: 75
+  completed_plans: 7
+  percent: 88
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 03 (google-drive-backup) — EXECUTING
-Plan: 2 of 3
-Status: Executing Phase 03 (plan 03-01 closed code-complete; OAuth GCP setup deferred)
-Last activity: 2026-04-28 -- Plan 03-01 cerrado: SDK + constants + store auth slice + googleAuth.ts + App.tsx hook (4/4 tasks, 57/57 tests). Runtime auth bloqueado hasta GCP Console setup.
+Plan: 3 of 3
+Status: Ready to execute
+Last activity: 2026-04-28
 
 Progress: [███░░░░░░░] 33%
 
@@ -54,6 +54,7 @@ Progress: [███░░░░░░░] 33%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 03 P02 | 10 min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,9 @@ Recent decisions affecting current work:
 - Plan 03-01: OAuth GCP-Console setup diferido por decisión del usuario — código code-complete y typed; runtime auth bloqueado hasta completar checklist (consent + 3 OAuth clients + envs + iOS scheme + EAS dev build). Ver `03-01-SUMMARY.md` §"Deferred / Pending User Setup".
 - Plan 03-01: Idempotencia con flag local en `googleAuth.ts` (`let configured = false`) — el SDK no expone getter; safe a llamar múltiples veces.
 - Plan 03-01: WebClientId env-gated con warn silencioso si falta — la app no crashea, queda con Drive deshabilitado hasta que envs estén seteados (permite seguir 03-02/03-03 dev sin OAuth real todavía).
+- [Phase 03]: Plan 03-02: driveBackupService.ts con multipart manual + DriveError class — surface lista para 03-03
+- [Phase 03]: Plan 03-02: RestoreFromDriveScreen scaffold operativo (loading+empty + listBackups real) + ruta registrada en App.tsx — 03-03 solo expande FlatList sin tocar registro de rutas
+- [Phase 03]: Plan 03-02: dateFormat.ts y driveRetention.ts como funciones puras compartidas — sin duplicación entre screens (CLAUDE.md Regla 3)
 
 ### Pending Todos
 
@@ -80,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-28T00:00:00.000Z
-Stopped at: Plan 03-01 cerrado code-complete (OAuth GCP-Console setup deferred). Próximo: ejecutar plan 03-02 (Drive transport + Settings UI).
-Resume file: .planning/phases/03-google-drive-backup/03-02-PLAN.md
+Last session: 2026-04-28T03:19:28.580Z
+Stopped at: Completed 03-02-PLAN.md
+Resume file: None

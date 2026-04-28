@@ -21,13 +21,13 @@
 ### Google Drive Backup
 
 - [ ] **DRIVE-01**: Usuario puede autenticarse con Google usando expo-auth-session con scope drive.file
-- [ ] **DRIVE-02**: Usuario puede subir backup completo a Google Drive con un botón manual
-- [ ] **DRIVE-03**: Archivos de backup nombrados con fecha (cozyhabits-YYYY-MM-DD.json)
+- [x] **DRIVE-02**: Usuario puede subir backup completo a Google Drive con un botón manual
+- [x] **DRIVE-03**: Archivos de backup nombrados con fecha (cozyhabits-YYYY-MM-DD.json)
 - [ ] **DRIVE-04**: Usuario puede ver lista de backups en Drive y seleccionar uno para restaurar
 - [ ] **DRIVE-05**: Usuario puede restaurar datos desde un backup de Google Drive (reemplaza datos locales con confirmación)
-- [ ] **DRIVE-06**: Usuario ve timestamp del último backup exitoso en la pantalla de settings
-- [ ] **DRIVE-07**: Usuario puede desconectar su cuenta de Google (sign out + revocar acceso)
-- [ ] **DRIVE-08**: Errores de Drive (quota, auth, red) se muestran al usuario con mensaje accionable
+- [x] **DRIVE-06**: Usuario ve timestamp del último backup exitoso en la pantalla de settings
+- [x] **DRIVE-07**: Usuario puede desconectar su cuenta de Google (sign out + revocar acceso)
+- [x] **DRIVE-08**: Errores de Drive (quota, auth, red) se muestran al usuario con mensaje accionable
 
 ## v2 Requirements
 
@@ -73,13 +73,13 @@
 | DEBT-02 | Phase 2 | Pending |
 | DEBT-03 | Phase 2 | Pending |
 | DRIVE-01 | Phase 3 | Pending |
-| DRIVE-02 | Phase 3 | Pending |
-| DRIVE-03 | Phase 3 | Pending |
+| DRIVE-02 | Phase 3 | Complete |
+| DRIVE-03 | Phase 3 | Complete |
 | DRIVE-04 | Phase 3 | Pending |
 | DRIVE-05 | Phase 3 | Pending |
-| DRIVE-06 | Phase 3 | Pending |
-| DRIVE-07 | Phase 3 | Pending |
-| DRIVE-08 | Phase 3 | Pending |
+| DRIVE-06 | Phase 3 | Complete |
+| DRIVE-07 | Phase 3 | Complete |
+| DRIVE-08 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 15 total
