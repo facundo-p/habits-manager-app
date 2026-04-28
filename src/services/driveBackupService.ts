@@ -174,8 +174,10 @@ export async function uploadBackup(): Promise<UploadResult> {
     ? await patchMultipart(existing.id, filename, json, token)
     : await postMultipart(filename, json, token);
 
-  // Pruning post-backup, best-effort (Pitfall #8 — NUNCA throws)
-  void pruneOldBackupsBestEffort(token);
+  // Pruning post-backup, best-effort (Pitfall #8 — NUNCA throws).
+  // IN-04: el helper re-fetchea su propio token para evitar usar uno stale si
+  // el upload tardó y el token rotó.
+  void pruneOldBackupsBestEffort();
 
   return { ...result, overwrote: !!existing };
 }
@@ -262,8 +264,12 @@ async function deleteFile(fileId: string, token: string): Promise<void> {
 
 // ─── Retention pruning ───────────────────────────────────────────────
 
-async function pruneOldBackupsBestEffort(token: string): Promise<void> {
+/** IN-04: re-fetchea token fresco aquí en vez de aceptar uno del caller. Evita
+ *  que un upload largo deje un token vencido propagado a los DELETE. Sigue siendo
+ *  best-effort (Pitfall #8 — NUNCA throws). */
+async function pruneOldBackupsBestEffort(): Promise<void> {
   try {
+    const token = await getDriveAccessToken();
     const files = await listBackups();
     const toPrune = selectFilesToPrune(files, new Date());
     for (const id of toPrune) {
