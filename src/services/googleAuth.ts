@@ -21,6 +21,19 @@ export function configureGoogleSignin(): void {
   configured = true;
 }
 
+/**
+ * Sanitiza un error del SDK para logging. Evita volcar el objeto completo —
+ * que en algunas versiones del SDK trae `userInfo` / `nativeStackAndroid` con
+ * fragmentos de token o hints de cuenta. Sólo `code` + `message`.
+ */
+function sanitizeAuthError(err: unknown): { code: string; message: string } {
+  const e = err as { code?: string; message?: string } | null;
+  return {
+    code: e?.code ?? 'no-code',
+    message: e?.message ?? String(err),
+  };
+}
+
 /** Restaura sesión silenciosamente. Retorna { email } si hay sesión válida; null si no. */
 export async function silentSignInIfPossible(): Promise<{ email: string } | null> {
   try {
@@ -30,7 +43,8 @@ export async function silentSignInIfPossible(): Promise<{ email: string } | null
     }
     return null;
   } catch (err) {
-    console.warn('[silentSignInIfPossible]', err);
+    const { code, message } = sanitizeAuthError(err);
+    console.warn('[silentSignInIfPossible]', code, message);
     return null;
   }
 }
