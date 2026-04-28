@@ -1,29 +1,84 @@
 /**
  * RestoreFromDriveScreen.tsx — Lista de backups en Google Drive (Phase 3).
  *
- * Plan 03-02 entrega el SCAFFOLD: estados loading + empty operativos. La ruta
- * ya está registrada en App.tsx, el botón "Restaurar desde Drive" en Settings
- * navega aquí desde día uno (sin Alert.alert intermedio, sin placeholders).
+ * Plan 03-02 dejó el SCAFFOLD: estados loading + empty operativos. La ruta ya
+ * está registrada en App.tsx, el botón "Restaurar desde Drive" en Settings
+ * navega aquí desde día uno.
  *
  * Plan 03-03 EXPANDE este archivo: agrega FlatList renderizando los backups,
- * preview Alert con conteos, restore confirmation destructivo, error state con
- * reintentar, refresh de stores post-restore. Ver UI-SPEC §3.
+ * preview Alert con conteos vía drive.prepareRestore (single download),
+ * restore confirmation destructivo, error state con reintentar, refresh de
+ * stores post-restore. Ver UI-SPEC §3.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { CloudOff } from 'lucide-react-native';
+import { FileText, ChevronRight, CloudOff, WifiOff } from 'lucide-react-native';
 import { AppScreenHeader } from '../components/layout/AppScreenHeader';
+import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import * as drive from '../services/driveBackupService';
+import { useHabitStore } from '../store/useHabitStore';
+import { formatDateEs, formatSize } from '../utils/dateFormat';
+import {
+  ALERT_DRIVE_RESTORE_CONFIRM,
+  ALERT_DRIVE_RESTORE_SUCCESS,
+  ALERT_DRIVE_GENERIC,
+} from '../config/constants';
 import { styles, colors } from './RestoreFromDriveScreen.styles';
 import { iconDefaults } from '../styles/ui.styles';
 
 type Status = 'loading' | 'empty' | 'error' | 'loaded';
+type OverlayMsg = null | 'Leyendo backup...' | 'Restaurando datos...';
+
+interface RowProps { file: drive.DriveBackupFile; onPress: () => void }
+function BackupRow({ file, onPress }: RowProps) {
+  const dateLabel = formatDateEs(new Date(file.createdTime));
+  const sizeLabel = formatSize(file.size);
+  return (
+    <Pressable
+      className={styles.itemRow}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Restaurar backup del ${dateLabel}, ${sizeLabel}`}
+    >
+      <FileText size={22} color={colors.amber600} strokeWidth={iconDefaults.strokeWidth} />
+      <View className="flex-1">
+        <Text className={styles.itemPrimary}>{dateLabel}</Text>
+        <Text className={styles.itemCaption}>{sizeLabel}</Text>
+      </View>
+      <ChevronRight size={18} color={colors.amber400} strokeWidth={iconDefaults.strokeWidth} />
+    </Pressable>
+  );
+}
+
+function Separator() { return <View className={styles.separator} />; }
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <View className={styles.errorContainer}>
+      <WifiOff size={48} color={colors.rose400} strokeWidth={iconDefaults.strokeWidth} />
+      <Text className={styles.errorHeading}>No se pudo cargar la lista</Text>
+      <Text className={styles.errorBody}>Verificá tu conexión e intentá de nuevo.</Text>
+      <Pressable
+        className={styles.errorRetryButton}
+        onPress={onRetry}
+        accessibilityRole="button"
+        accessibilityLabel="Reintentar carga de backups"
+      >
+        <Text className={styles.errorRetryButtonText}>Reintentar</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 export function RestoreFromDriveScreen() {
   const navigation = useNavigation();
+  const fetchHabitsForDate = useHabitStore((s) => s.fetchHabitsForDate);
+  const fetchLibrary = useHabitStore((s) => s.fetchLibrary);
+
   const [status, setStatus] = useState<Status>('loading');
   const [files, setFiles] = useState<drive.DriveBackupFile[]>([]);
+  const [overlayMsg, setOverlayMsg] = useState<OverlayMsg>(null);
 
   const loadList = useCallback(async () => {
     setStatus('loading');
@@ -38,6 +93,59 @@ export function RestoreFromDriveScreen() {
   }, []);
 
   useEffect(() => { void loadList(); }, [loadList]);
+
+  const showError = useCallback((err: unknown) => {
+    const alert = err instanceof drive.DriveError ? err.alert : ALERT_DRIVE_GENERIC;
+    Alert.alert(alert.title, alert.message);
+  }, []);
+
+  const performRestore = useCallback(async (payload: drive.RestorePayload) => {
+    setOverlayMsg('Restaurando datos...');
+    try {
+      await drive.applyRestore(payload);
+      const today = new Date().toISOString().slice(0, 10);
+      await Promise.all([fetchHabitsForDate(today), fetchLibrary()]);
+      const fechaLabel = formatDateEs(new Date(payload.exportedAt));
+      Alert.alert(
+        ALERT_DRIVE_RESTORE_SUCCESS.title,
+        `Tus datos fueron restaurados desde el backup del ${fechaLabel}. Tus datos previos quedaron respaldados en el dispositivo por si querés revertir.`,
+      );
+    } catch (err) {
+      console.error('[performRestore]', err);
+      showError(err);
+    } finally {
+      setOverlayMsg(null);
+    }
+  }, [fetchHabitsForDate, fetchLibrary, showError]);
+
+  const previewAndConfirm = useCallback(async (file: drive.DriveBackupFile) => {
+    setOverlayMsg('Leyendo backup...');
+    try {
+      const payload = await drive.prepareRestore(file.id);
+      setOverlayMsg(null);
+
+      const fechaLabel = formatDateEs(new Date(payload.exportedAt));
+      const message =
+        `Vas a restaurar el backup del ${fechaLabel} (` +
+        `${payload.counts.habits} hábitos, ` +
+        `${payload.counts.performed_habits} completados, ` +
+        `${payload.counts.mood_entries} moods, ` +
+        `${payload.counts.daily_assignments} assignments).\n\n` +
+        `Esto reemplazará todos tus datos actuales. Esta acción no se puede deshacer.`;
+      Alert.alert(
+        ALERT_DRIVE_RESTORE_CONFIRM.title,
+        message,
+        [
+          { text: ALERT_DRIVE_RESTORE_CONFIRM.cancel, style: 'cancel' },
+          { text: ALERT_DRIVE_RESTORE_CONFIRM.confirm, style: 'destructive', onPress: () => void performRestore(payload) },
+        ],
+      );
+    } catch (err) {
+      console.error('[previewAndConfirm]', err);
+      setOverlayMsg(null);
+      showError(err);
+    }
+  }, [performRestore, showError]);
 
   return (
     <View className={styles.container}>
@@ -59,14 +167,16 @@ export function RestoreFromDriveScreen() {
           <Text className={styles.emptyBody}>Hacé tu primer backup desde Ajustes.</Text>
         </View>
       )}
-      {/* Estados `error` y `loaded` (FlatList + preview + restore) — plan 03-03 los expande. */}
-      {(status === 'error' || status === 'loaded') && (
-        <View className={styles.emptyContainer}>
-          <Text className={styles.emptyBody}>
-            {files.length} backup(s) detectados — la lista detallada se habilita al completar la próxima tarea del phase.
-          </Text>
-        </View>
+      {status === 'error' && <ErrorState onRetry={() => void loadList()} />}
+      {status === 'loaded' && (
+        <FlatList
+          data={files}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <BackupRow file={item} onPress={() => void previewAndConfirm(item)} />}
+          ItemSeparatorComponent={Separator}
+        />
       )}
+      <LoadingOverlay visible={overlayMsg !== null} message={overlayMsg ?? ''} />
     </View>
   );
 }
