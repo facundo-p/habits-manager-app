@@ -3,131 +3,109 @@ phase: 03-google-drive-backup
 fixed_at: 2026-04-27T00:00:00Z
 review_path: .planning/phases/03-google-drive-backup/03-REVIEW.md
 iteration: 1
-findings_in_scope: 4
-fixed: 4
+findings_in_scope: 7
+fixed: 7
 skipped: 0
 status: all_fixed
 ---
 
-# Phase 3: Code Review Fix Report
+# Phase 3: Code Review Fix Report (Iteration 2 source / Iteration 1 of info-scope fixer)
 
 **Fixed at:** 2026-04-27T00:00:00Z
-**Source review:** .planning/phases/03-google-drive-backup/03-REVIEW.md
-**Iteration:** 1
+**Source review:** `.planning/phases/03-google-drive-backup/03-REVIEW.md` (review iteration 2)
+**Fixer iteration:** 1
+**Scope:** `--all` (Critical + Warning + Info). Source review reported 0 critical / 0 warning / 7 info, so this run targets the 7 info findings only. The 4 warnings were already addressed in a previous fixer session (commits `58b8895`, `cdb515e`, `0b99572`, `8930fee`, `d3f5564`, `acd1235`).
 
 **Summary:**
-- Findings in scope: 4 (Critical: 0, Warning: 4)
-- Info findings (out of scope): 7
-- Fixed: 4
+- Findings in scope: 7
+- Fixed: 7
 - Skipped: 0
-
-All four warnings were addressed via TDD-style commits where applicable
-(RED test commit + GREEN fix commit) and atomic single-purpose fixes for
-the defensive changes. Test suite stays green: 98/98 tests passing
-(95 baseline + 3 new auth-mapping tests for WR-01).
+- Tests: 98 -> 102 passing (4 new regression tests for IN-03 + IN-07; rest stayed green)
 
 ## Fixed Issues
 
-### WR-01: Auth SDK errors bypass `DriveError` mapping
+### IN-01: Hardcoded Spanish UI strings bypass constants module
 
-**Files modified:** `src/__tests__/driveBackupService.test.ts`, `src/services/driveBackupService.ts`
-**Commits:**
-- `58b8895` test(03): WR-01 add failing tests for auth SDK error mapping
-- `cdb515e` fix(03): WR-01 map auth SDK errors to DriveError(AUTH_EXPIRED|NO_NETWORK)
+**Files modified:** `src/config/constants.ts`, `src/screens/RestoreFromDriveScreen.tsx`
+**Commit:** `b48afcf` — `refactor(03): IN-01 move RestoreFromDriveScreen static strings to constants`
+**Applied fix:** Added `RESTORE_SCREEN_TITLE`, `RESTORE_SCREEN_LOADING`, `RESTORE_SCREEN_OVERLAY_READING`, `RESTORE_SCREEN_OVERLAY_RESTORING`, `EMPTY_DRIVE_BACKUPS`, and `ERROR_DRIVE_LOAD` to `src/config/constants.ts`. Replaced inline JSX strings (screen title, loading caption, empty heading/body, error heading/body, retry label) and the `OverlayMsg` type literals in `RestoreFromDriveScreen.tsx`. Templated alert messages (counts breakdown, restore success body) stay at the call site, as they were already documented as by-design via `// message templated at call site` comments in the existing `ALERT_DRIVE_*` constants.
 
-**Applied fix:** Wrapped `getDriveAccessToken()` SDK calls in try/catch:
-- `signInSilently` / `getTokens` rejections that aren't already `DriveError` are
-  re-thrown as `DriveError(ALERT_DRIVE_AUTH_EXPIRED, err)`.
-- `TypeError` matching `/network/i` re-throws as
-  `DriveError(ALERT_DRIVE_NO_NETWORK, err)`.
-- An empty `accessToken` from `getTokens()` raises
-  `DriveError(ALERT_DRIVE_AUTH_EXPIRED)` directly.
+### IN-02: console.warn in silentSignInIfPossible may leak SDK error fields
 
-Three regression tests cover all branches: SDK rejection, empty token, network
-TypeError. Function size: 14 lines (≤20 cumple regla de proyecto).
+**Files modified:** `src/services/googleAuth.ts`
+**Commit:** `daa9b0e` — `fix(03): IN-02 sanitize SDK error logs in silentSignInIfPossible`
+**Applied fix:** Added a `sanitizeAuthError(err)` helper that returns `{ code, message }` only — never the full SDK error object (which on some versions carries `userInfo` / `nativeStackAndroid` payloads with token fragments or account hints). `silentSignInIfPossible` now logs `console.warn('[silentSignInIfPossible]', code, message)`.
 
-### WR-02: Pre-restore cache cleanup deletes the just-written safety cache
+### IN-03: signIn() maps any non-cancellation error to ALERT_DRIVE_GENERIC
 
-**Files modified:** `src/__tests__/driveBackupService.restore.test.ts`, `src/services/driveBackupService.ts`
-**Commits:**
-- `0b99572` test(03): WR-02 expect newest pre-restore cache to survive cleanup
-- `8930fee` fix(03): WR-02 preserve newest pre-restore cache during cleanup
+**Files modified:** `src/services/driveBackupService.ts`, `src/__tests__/driveBackupService.test.ts`
+**Commit:** `29a5d54` — `fix(03): IN-03 map network errors during interactive signIn to NO_NETWORK alert`
+**Applied fix:** In the `signIn()` catch block, added a `TypeError + /network/i.test(err.message)` branch that throws `DriveError(ALERT_DRIVE_NO_NETWORK, err)` before the GENERIC fallback. Did NOT extract a shared helper with `getDriveAccessToken` because the fallback semantics differ (signIn -> GENERIC, getDriveAccessToken -> AUTH_EXPIRED) — a unified helper would obscure per-path intent. Added 2 regression tests in `signIn` describe block: network TypeError -> `NO_NETWORK`; generic Error -> `GENERIC`.
 
-**Applied fix:** Per user-confirmed Option A — the cleanup implementation now
-matches the UI promise. `cleanupOldPreRestoreCache` filters
-`cozyhabits-pre-restore-*.json` entries, sorts them lexicographically (ISO
-timestamps in name = chronological order), and applies `slice(0, -1)` to skip
-the newest. The freshly-written pre-restore cache from this restore survives so
-the user can revert if something goes wrong. Existing test 5 was updated to
-include a "today" pre-restore file in the directory mock and assert it is NOT
-in the deletion list. Function size: 13 lines (≤20).
+### IN-04: pruneOldBackupsBestEffort mixes a stale token with listBackups's fresh token
 
-### WR-03: Async `setState` after unmount in restore + connect flows
+**Files modified:** `src/services/driveBackupService.ts`
+**Commit:** `53092ca` — `fix(03): IN-04 refresh token inside pruneOldBackupsBestEffort to avoid stale token`
+**Applied fix:** Dropped the `token` parameter from `pruneOldBackupsBestEffort()`. The helper now calls `getDriveAccessToken()` itself before iterating deletes, so the token used for DELETE matches the generation `listBackups()` already refreshes internally. Updated the call site in `uploadBackup()` to `void pruneOldBackupsBestEffort()`. Still best-effort (Pitfall #8): both the inner per-delete try/catch and the outer try/catch swallow errors so pruning failures never fail the backup. Existing pruning tests still pass without modification.
 
-**Files modified:** `src/screens/RestoreFromDriveScreen.tsx`, `src/screens/SettingsScreen.tsx`
-**Commit:** `d3f5564` fix(03): WR-03 add isMountedRef guards for async setState in restore + settings flows
+### IN-05: postMultipart / patchMultipart don't validate Drive's response shape
 
-**Applied fix:** Added `mountedRef = useRef(true)` + `useEffect(() => () => { mountedRef.current = false; }, [])`
-cleanup pattern in both screens. Each `setState` call after an `await` is now
-guarded by `if (!mountedRef.current) return;` (or wrapped in
-`if (mountedRef.current) ...` for `finally` blocks). Applied to:
-- `RestoreFromDriveScreen.loadList`, `performRestore`, `previewAndConfirm`
-- `SettingsScreen.handleConnect`, `performBackup`
+**Files modified:** `src/services/driveBackupService.ts`
+**Commit:** `748188e` — `refactor(03): IN-05 narrow Drive upload response with parseUploadResponse helper`
+**Applied fix:** Added a `parseUploadResponse(data: unknown, filename: string)` helper that:
+- Casts the response to `{ id?: unknown; name?: unknown; size?: unknown } | null`.
+- Throws `DriveError(ALERT_DRIVE_GENERIC)` if `id` is not a non-empty string (would otherwise propagate `undefined` to `setLastBackup` and persist `lastBackupFileId: undefined`).
+- Defaults `name` to the requested filename if missing/non-string.
+- Defaults `size` to `'0'` if missing/non-string.
+Replaced direct `data.id / data.name / data.size` reads in `postMultipart` and `patchMultipart` with `parseUploadResponse(...)`. `listBackups` and `findFileByName` already had a defensive `Array.isArray(data?.files)` check, so they were left as-is per the lightweight-approach instruction.
 
-Defensive — no behavior change in the happy path. Test suite remains green
-(98/98).
+### IN-06: signOut doesn't reset the in-memory configured flag
 
-### WR-04: `previewAndConfirm` allows concurrent downloads
+**Files modified:** `src/services/googleAuth.ts`
+**Commit:** `ebec52a` — `chore(03): IN-06 expose resetGoogleSigninConfig() helper for re-config flows`
+**Applied fix:** Exported `resetGoogleSigninConfig()` that sets `configured = false`. Updated the JSDoc on `configureGoogleSignin()` to point at the new helper for re-configuration scenarios. Did NOT change `configureGoogleSignin` behavior — it stays idempotent. Useful for tests (re-configure between runs) and for a future scope-change feature.
 
-**File modified:** `src/screens/RestoreFromDriveScreen.tsx`
-**Commit:** `acd1235` fix(03): WR-04 add isPreparing single-download guard with disabled BackupRow
+### IN-07: handleSignOutConfirm keeps user "logged in" if signOut rejects
 
-**Applied fix:** Added `isPreparing` boolean state to enforce single-download
-invariant as belt-and-suspenders alongside the existing `LoadingOverlay` Modal:
-- `previewAndConfirm` returns early if `isPreparing` is already `true`.
-- `setIsPreparing(true)` at the top, cleared in `finally` (mount-guarded).
-- `BackupRow` accepts a `disabled?: boolean` prop forwarded to its `Pressable`,
-  and the FlatList passes `disabled={isPreparing}` to all rows during a download.
-
-This prevents the ~250ms RN Modal fade-animation race window where a second
-tap could register on the FlatList behind the overlay.
+**Files modified:** `src/config/constants.ts`, `src/services/driveBackupService.ts`, `src/screens/SettingsScreen.tsx`, `src/__tests__/driveBackupService.test.ts`
+**Commit:** `2057698` — `fix(03): IN-07 keep local session on SDK signOut failure with user alert`
+**Applied fix:** Per the per-finding instructions in `<important_constraints>` (which override the REVIEW.md suggestion): a partial sign-out where Google says "no" but local state is cleared is worse than a no-op + alert.
+- Added `ALERT_DRIVE_SIGNOUT_FAILED` constant in `src/config/constants.ts`.
+- Added `signOutSafe()` to `driveBackupService.ts` returning `{ ok: true } | { ok: false, error }` — typed result instead of throw, so the UI decides what to do without coupling.
+- `handleSignOutConfirm` now calls `signOutSafe()`. On `ok: false`, it shows `ALERT_DRIVE_SIGNOUT_FAILED` and `return`s early — `clearGoogleSession()` is NOT called, so `googleEmail` stays visible and the user can retry (or cancel from Google's account page if the SDK keeps failing).
+- Added 2 regression tests for `signOutSafe`: success path returns `{ ok: true }`; SDK rejection returns `{ ok: false, error }` without throwing.
 
 ## Skipped Issues
 
-None — all four in-scope warnings fixed cleanly.
-
-## Out-of-scope (Info findings, not addressed)
-
-The following 7 Info-level findings were explicitly out of scope for this fix
-session (`fix_scope: critical_warning`). They remain documented in
-`03-REVIEW.md` for future iteration:
-
-- IN-01: Hardcoded Spanish UI strings bypass constants module
-- IN-02: `console.warn` in `silentSignInIfPossible` may leak SDK error fields
-- IN-03: `signIn()` maps any non-cancellation error to `ALERT_DRIVE_GENERIC`
-- IN-04: `pruneOldBackupsBestEffort` mixes a stale token with `listBackups`'s fresh token
-- IN-05: `postMultipart` / `patchMultipart` don't validate Drive's response shape
-- IN-06: `signOut` doesn't reset the in-memory `configured` flag in `googleAuth.ts`
-- IN-07: `handleSignOutConfirm` keeps user "logged in" if `signOut` rejects
+None.
 
 ## Verification
 
-- `npm test` after the final fix commit: **98/98 tests pass** in 10 suites.
-  - 95 baseline tests preserved.
-  - 3 new tests for WR-01 (`signInSilently rechaza`, `getTokens accessToken vacío`, `signInSilently TypeError network`).
-  - 1 existing test reused/updated for WR-02 (assertion on newest cache survival).
-- Each behavior fix has a paired RED test commit (TDD discipline).
-- No unrelated dirty/untracked files were staged into any commit (used explicit
-  `--files <list>` for every commit).
+- `npm test` after each fix commit: tests stayed green (98 -> 100 -> 100 -> 100 -> 100 -> 100 -> 102).
+- Final run: **102/102 tests pass** in 10 suites (98 baseline + 2 new for IN-03 + 2 new for IN-07).
+- No unrelated dirty/untracked files staged: every commit used explicit `--files <list>`. Pre-existing modifications to `src/store/useHabitStore.ts`, `.planning/config.json`, `03-RESEARCH.md`, `03-VALIDATION.md`, and untracked `.claude/`, `02-PATTERNS.md`, `03-PATTERNS.md`, plan/deferred markdown stay un-staged.
 - Project rule "function ≤20 lines" respected:
-  - `getDriveAccessToken`: 14 lines.
-  - `cleanupOldPreRestoreCache`: 13 lines.
-  - All callbacks in screens stay below the threshold.
-- No inline styles introduced; only added a `disabled` prop to existing
-  `Pressable`.
-- Spanish UI strings: no user-facing text changed in this session — WR-02 was
-  fixed by aligning implementation with the existing `ALERT_DRIVE_RESTORE_SUCCESS`
-  promise instead of editing the alert constant.
+  - `signIn` after IN-03: 16 lines.
+  - `pruneOldBackupsBestEffort` after IN-04: 16 lines.
+  - `parseUploadResponse`: 13 lines.
+  - `postMultipart` / `patchMultipart`: 18 lines each.
+  - `signOutSafe`: 7 lines.
+  - `sanitizeAuthError`: 6 lines.
+  - `handleSignOutConfirm` after IN-07: 8 lines.
+- No inline styles introduced.
+- Spanish UI strings: not translated, only centralized (per instruction). New constant `ALERT_DRIVE_SIGNOUT_FAILED` follows the existing `ALERT_DRIVE_*` naming pattern.
+
+## Commits Summary (atomic, one per finding)
+
+| Finding | Commit  | Type        |
+|---------|---------|-------------|
+| IN-01   | `b48afcf` | refactor(03) |
+| IN-02   | `daa9b0e` | fix(03)      |
+| IN-03   | `29a5d54` | fix(03)      |
+| IN-04   | `53092ca` | fix(03)      |
+| IN-05   | `748188e` | refactor(03) |
+| IN-06   | `ebec52a` | chore(03)    |
+| IN-07   | `2057698` | fix(03)      |
 
 ---
 
