@@ -9,7 +9,7 @@
  * Tras importar, se refrescan todos los stores de Zustand.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, Switch, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -92,6 +92,10 @@ export function SettingsScreen() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // WR-03: guard contra setState después de unmount (back-press durante async work)
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   const handleExport = useCallback(async () => {
     setIsExporting(true);
     try {
@@ -135,14 +139,16 @@ export function SettingsScreen() {
     setIsConnecting(true);
     try {
       const session = await drive.signIn();
+      if (!mountedRef.current) return; // WR-03
       if (session) setGoogleEmail(session.email);
     } catch (err) {
       console.error('[handleConnect]', err);
+      if (!mountedRef.current) return; // WR-03
       const alert = err instanceof drive.DriveError ? err.alert : ALERT_DRIVE_GENERIC;
       // Pitfall #3 (Android): defer Alert.alert para que el modal del SDK se cierre primero
       setTimeout(() => Alert.alert(alert.title, alert.message), 0);
     } finally {
-      setIsConnecting(false);
+      if (mountedRef.current) setIsConnecting(false); // WR-03
     }
   }, [setGoogleEmail]);
 
@@ -150,6 +156,7 @@ export function SettingsScreen() {
     setIsUploading(true);
     try {
       const result = await drive.uploadBackup();
+      if (!mountedRef.current) return; // WR-03
       setLastBackup(new Date().toISOString(), result.fileId);
       // D-13: Alert refleja si reemplazó el backup del día o si fue uno nuevo
       const successAlert = result.overwrote
@@ -158,10 +165,11 @@ export function SettingsScreen() {
       Alert.alert(successAlert.title, successAlert.message);
     } catch (err) {
       console.error('[performBackup]', err);
+      if (!mountedRef.current) return; // WR-03
       const alert = err instanceof drive.DriveError ? err.alert : ALERT_DRIVE_GENERIC;
       Alert.alert(alert.title, alert.message);
     } finally {
-      setIsUploading(false);
+      if (mountedRef.current) setIsUploading(false); // WR-03
     }
   }, [setLastBackup]);
 

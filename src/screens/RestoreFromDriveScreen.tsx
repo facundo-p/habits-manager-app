@@ -10,7 +10,7 @@
  * restore confirmation destructivo, error state con reintentar, refresh de
  * stores post-restore. Ver UI-SPEC §3.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, FlatList, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FileText, ChevronRight, CloudOff, WifiOff } from 'lucide-react-native';
@@ -80,14 +80,20 @@ export function RestoreFromDriveScreen() {
   const [files, setFiles] = useState<drive.DriveBackupFile[]>([]);
   const [overlayMsg, setOverlayMsg] = useState<OverlayMsg>(null);
 
+  // WR-03: guard contra setState después de unmount (back-press durante async work)
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   const loadList = useCallback(async () => {
     setStatus('loading');
     try {
       const result = await drive.listBackups();
+      if (!mountedRef.current) return;
       setFiles(result);
       setStatus(result.length === 0 ? 'empty' : 'loaded');
     } catch (err) {
       console.error('[RestoreFromDriveScreen.loadList]', err);
+      if (!mountedRef.current) return;
       setStatus('error');
     }
   }, []);
@@ -105,6 +111,7 @@ export function RestoreFromDriveScreen() {
       await drive.applyRestore(payload);
       const today = new Date().toISOString().slice(0, 10);
       await Promise.all([fetchHabitsForDate(today), fetchLibrary()]);
+      if (!mountedRef.current) return; // WR-03
       const fechaLabel = formatDateEs(new Date(payload.exportedAt));
       Alert.alert(
         ALERT_DRIVE_RESTORE_SUCCESS.title,
@@ -112,9 +119,10 @@ export function RestoreFromDriveScreen() {
       );
     } catch (err) {
       console.error('[performRestore]', err);
+      if (!mountedRef.current) return; // WR-03
       showError(err);
     } finally {
-      setOverlayMsg(null);
+      if (mountedRef.current) setOverlayMsg(null); // WR-03
     }
   }, [fetchHabitsForDate, fetchLibrary, showError]);
 
@@ -122,6 +130,7 @@ export function RestoreFromDriveScreen() {
     setOverlayMsg('Leyendo backup...');
     try {
       const payload = await drive.prepareRestore(file.id);
+      if (!mountedRef.current) return; // WR-03
       setOverlayMsg(null);
 
       const fechaLabel = formatDateEs(new Date(payload.exportedAt));
@@ -142,6 +151,7 @@ export function RestoreFromDriveScreen() {
       );
     } catch (err) {
       console.error('[previewAndConfirm]', err);
+      if (!mountedRef.current) return; // WR-03
       setOverlayMsg(null);
       showError(err);
     }
