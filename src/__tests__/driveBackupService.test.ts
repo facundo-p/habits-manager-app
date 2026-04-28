@@ -42,7 +42,7 @@ jest.doMock('../services/backupService', () => ({
 }));
 
 const {
-  signIn, signOut, uploadBackup, listBackups, mapDriveError,
+  signIn, signOut, signOutSafe, uploadBackup, listBackups, mapDriveError,
 } = require('../services/driveBackupService');
 const {
   ALERT_DRIVE_NO_NETWORK, ALERT_DRIVE_AUTH_EXPIRED, ALERT_DRIVE_QUOTA,
@@ -108,6 +108,22 @@ describe('driveBackupService', () => {
     test('llama GoogleSignin.signOut (no revokeAccess per D-10)', async () => {
       await signOut();
       expect(GoogleSignin.signOut).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('signOutSafe (IN-07)', () => {
+    test('retorna { ok: true } cuando el SDK resuelve', async () => {
+      const result = await signOutSafe();
+      expect(result).toEqual({ ok: true });
+      expect(GoogleSignin.signOut).toHaveBeenCalledTimes(1);
+    });
+
+    test('retorna { ok: false, error } cuando el SDK rechaza — NO throws', async () => {
+      const sdkErr = new Error('network down');
+      (GoogleSignin.signOut as jest.Mock).mockRejectedValueOnce(sdkErr);
+      const result = await signOutSafe();
+      expect(result.ok).toBe(false);
+      expect((result as { ok: false; error: unknown }).error).toBe(sdkErr);
     });
   });
 

@@ -28,6 +28,7 @@ import {
   ALERT_IMPORT, ALERT_IMPORT_SUCCESS, ALERT_IMPORT_ERROR, ALERT_EXPORT_ERROR,
   ALERT_DRIVE_SIGN_OUT, ALERT_DRIVE_OVERWRITE_TODAY,
   ALERT_DRIVE_BACKUP_SUCCESS, ALERT_DRIVE_BACKUP_REPLACED, ALERT_DRIVE_GENERIC,
+  ALERT_DRIVE_SIGNOUT_FAILED,
 } from '../config/constants';
 import { formatDateEs, formatRelativeBackup } from '../utils/dateFormat';
 import { styles, switchColors, colors } from './SettingsScreen.styles';
@@ -199,14 +200,18 @@ export function SettingsScreen() {
     }
   }, [performBackup]);
 
+  /** IN-07: Si el SDK rechaza, NO limpiamos el slice local — un sign-out parcial
+   *  donde Google dice "no" pero el estado local quedó vacío sería peor que un
+   *  no-op + alerta. El usuario puede reintentar y, si persiste, tiene la opción
+   *  manual de cerrar sesión desde la cuenta de Google. */
   const handleSignOutConfirm = useCallback(async () => {
-    try {
-      await drive.signOut();
-      clearGoogleSession(); // D-11: preserva lastBackupAt + lastBackupFileId
-    } catch (err) {
-      console.error('[handleSignOut]', err);
-      Alert.alert(ALERT_DRIVE_GENERIC.title, ALERT_DRIVE_GENERIC.message);
+    const result = await drive.signOutSafe();
+    if (!result.ok) {
+      console.error('[handleSignOut]', result.error);
+      Alert.alert(ALERT_DRIVE_SIGNOUT_FAILED.title, ALERT_DRIVE_SIGNOUT_FAILED.message);
+      return; // mantenemos el estado local: googleEmail sigue visible
     }
+    clearGoogleSession(); // D-11: preserva lastBackupAt + lastBackupFileId
   }, [clearGoogleSession]);
 
   const handleSignOut = useCallback(() => {

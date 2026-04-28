@@ -103,6 +103,19 @@ export async function signOut(): Promise<void> {
   await GoogleSignin.signOut();
 }
 
+/** IN-07: Sign-out con resultado tipado para que la UI decida si limpia el slice
+ *  local. Si el SDK rechaza (red caída, error nativo), retornamos `ok: false` y
+ *  el caller mantiene el estado local + muestra alerta — un sign-out parcial
+ *  (Google "no" + estado local vacío) sería peor que un no-op + aviso. */
+export async function signOutSafe(): Promise<{ ok: true } | { ok: false; error: unknown }> {
+  try {
+    await GoogleSignin.signOut();
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error };
+  }
+}
+
 /** Pre-flight: re-trigger silentSignIn para refrescar el token (Pitfall #1).
  *  WR-01: errores del SDK (sesión revocada, token vencido, refresh failure) se
  *  mapean a DriveError tipado para que la UI muestre el Alert correcto en vez

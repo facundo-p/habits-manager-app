@@ -266,6 +266,14 @@ export const ALERT_DRIVE_SIGN_OUT = {
   cancel: 'Cancelar',
 } as const;
 
+// IN-07: el SDK signOut puede fallar (red caída mid-revoke, error nativo). En ese
+// caso preferimos un no-op + aviso al usuario en vez de un sign-out parcial donde
+// Google dice "no" pero el estado local quedó limpio.
+export const ALERT_DRIVE_SIGNOUT_FAILED = {
+  title: 'No se pudo cerrar sesión',
+  message: 'Hubo un problema al desconectar tu cuenta de Google. Verificá tu conexión e intentá de nuevo.',
+} as const;
+
 export const ALERT_DRIVE_OVERWRITE_TODAY = {
   title: '¿Reemplazar el backup de hoy?',
   // message templated at call site con {fechaHoy}
