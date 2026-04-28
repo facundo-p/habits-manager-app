@@ -244,3 +244,80 @@ export const ALERT_EXPORT_ERROR = {
   title: 'Error de exportación',
   message: 'No se pudo exportar el respaldo. Intenta nuevamente.',
 } as const;
+
+// ─── Drive Backup ───────────────────────────────────────────────────
+export const BACKUP_FILE_PREFIX = 'cozyhabits-';
+export const BACKUP_FILE_EXTENSION = '.json';
+export const RETENTION_RECENT_DAYS = 30;
+export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+
+// ─── Drive Alerts ───────────────────────────────────────────────────
+export const ALERT_DRIVE_RESTORE_CONFIRM = {
+  title: '¿Restaurar este backup?',
+  // message templated at call site con {fecha, N, M, K, J}
+  confirm: 'Restaurar',
+  cancel: 'Cancelar',
+} as const;
+
+export const ALERT_DRIVE_SIGN_OUT = {
+  title: '¿Desconectar tu cuenta?',
+  message: 'Vas a cerrar sesión de Google. Podés volver a conectarla cuando quieras. Tus backups en Drive no se eliminan.',
+  confirm: 'Desconectar',
+  cancel: 'Cancelar',
+} as const;
+
+export const ALERT_DRIVE_OVERWRITE_TODAY = {
+  title: '¿Reemplazar el backup de hoy?',
+  // message templated at call site con {fechaHoy}
+  confirm: 'Reemplazar',
+  cancel: 'Cancelar',
+} as const;
+
+export const ALERT_DRIVE_BACKUP_SUCCESS = {
+  title: 'Backup completado',
+  message: 'Tu respaldo se guardó en Google Drive.',
+} as const;
+
+// D-13: variante usada cuando uploadBackup retornó { overwrote: true } (PATCH al fileId
+// del día). El caller arma el mensaje final concatenando este suffix al base success.
+export const ALERT_DRIVE_BACKUP_REPLACED = {
+  title: 'Backup completado',
+  message: 'Tu respaldo se guardó en Google Drive. Reemplazó al backup anterior del día.',
+} as const;
+
+export const ALERT_DRIVE_RESTORE_SUCCESS = {
+  title: 'Restauración exitosa',
+  // message templated at call site con {fecha}
+} as const;
+
+export const ALERT_DRIVE_NO_NETWORK = {
+  title: 'Sin conexión',
+  message: 'No hay internet. Verificá tu red e intentá de nuevo.',
+  retry: true,
+} as const;
+
+export const ALERT_DRIVE_AUTH_EXPIRED = {
+  title: 'Sesión expirada',
+  message: 'Tu sesión de Google expiró. Volvé a conectar tu cuenta desde Ajustes.',
+  retry: false,
+  actionLabel: 'Ir a Ajustes',
+} as const;
+
+export const ALERT_DRIVE_QUOTA = {
+  title: 'Drive sin espacio',
+  message: 'Tu Google Drive está lleno. Liberá espacio en drive.google.com o usá otra cuenta.',
+  retry: false,
+} as const;
+
+export const ALERT_DRIVE_PERMISSION = {
+  title: 'Permisos revocados',
+  message: 'Cozy Habits ya no tiene acceso a tu Drive. Reconectá tu cuenta desde Ajustes.',
+  retry: false,
+  actionLabel: 'Ir a Ajustes',
+} as const;
+
+export const ALERT_DRIVE_GENERIC = {
+  title: 'Algo salió mal',
+  message: 'No pudimos completar la operación. Intentá de nuevo en unos minutos.',
+  retry: true,
+} as const;
