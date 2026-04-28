@@ -9,7 +9,9 @@ import { DRIVE_SCOPE } from '../config/constants';
 
 let configured = false;
 
-/** Configura el SDK con webClientId. Idempotente — early return si ya fue llamada. */
+/** Configura el SDK con webClientId. Idempotente — early return si ya fue llamada.
+ *  Si un futuro feature requiere reconfigurar (p.ej. scope adicional), llamar
+ *  `resetGoogleSigninConfig()` antes para forzar una nueva configuración. */
 export function configureGoogleSignin(): void {
   if (configured) return;
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -19,6 +21,13 @@ export function configureGoogleSignin(): void {
   }
   GoogleSignin.configure({ webClientId, scopes: [DRIVE_SCOPE], offlineAccess: false });
   configured = true;
+}
+
+/** IN-06: resetea el flag idempotente para permitir re-configurar el SDK.
+ *  Pensado principalmente para tests (re-configurar entre runs) y para un
+ *  futuro flujo de cambio de scopes. NO llama a `signOut` ni revoca acceso. */
+export function resetGoogleSigninConfig(): void {
+  configured = false;
 }
 
 /**
