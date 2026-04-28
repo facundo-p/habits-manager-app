@@ -182,6 +182,25 @@ export async function uploadBackup(): Promise<UploadResult> {
   return { ...result, overwrote: !!existing };
 }
 
+/** IN-05: valida que la respuesta de Drive (POST/PATCH `files`) trae al menos
+ *  un `id` string no vacío. Defensivo — el contrato de la API debería garantizarlo,
+ *  pero un partial response causaría persistir `lastBackupFileId: undefined`
+ *  en el store. Falla a `DriveError(GENERIC)` para que la UI muestre el alert. */
+function parseUploadResponse(
+  data: unknown,
+  filename: string,
+): { fileId: string; name: string; size: string } {
+  const d = data as { id?: unknown; name?: unknown; size?: unknown } | null;
+  if (!d || typeof d.id !== 'string' || d.id.length === 0) {
+    throw new DriveError(ALERT_DRIVE_GENERIC);
+  }
+  return {
+    fileId: d.id,
+    name: typeof d.name === 'string' ? d.name : filename,
+    size: typeof d.size === 'string' ? d.size : '0',
+  };
+}
+
 function buildMultipartBody(metadata: object, content: string, boundary: string): string {
   return (
     `\r\n--${boundary}\r\n` +
@@ -211,8 +230,8 @@ async function postMultipart(
     },
     body,
   });
-  const data = await res.json();
-  return { fileId: data.id, name: data.name, size: data.size };
+  const data: unknown = await res.json();
+  return parseUploadResponse(data, filename);
 }
 
 async function patchMultipart(
@@ -234,8 +253,8 @@ async function patchMultipart(
     },
     body,
   });
-  const data = await res.json();
-  return { fileId: data.id, name: data.name, size: data.size };
+  const data: unknown = await res.json();
+  return parseUploadResponse(data, filename);
 }
 
 // ─── Download ────────────────────────────────────────────────────────
