@@ -165,6 +165,34 @@ describe('driveBackupService', () => {
 
       await expect(uploadBackup()).resolves.toMatchObject({ fileId: 'new_id' });
     });
+
+    test('signInSilently rechaza (sesión revocada) → DriveError(AUTH_EXPIRED) (WR-01)', async () => {
+      const sdkErr = Object.assign(new Error('SIGN_IN_REQUIRED'), { code: 'SIGN_IN_REQUIRED' });
+      (GoogleSignin.signInSilently as jest.Mock).mockRejectedValueOnce(sdkErr);
+
+      const promise = uploadBackup();
+      await expect(promise).rejects.toMatchObject({
+        alert: ALERT_DRIVE_AUTH_EXPIRED,
+      });
+    });
+
+    test('getTokens devuelve accessToken vacío → DriveError(AUTH_EXPIRED) (WR-01)', async () => {
+      (GoogleSignin.getTokens as jest.Mock).mockResolvedValueOnce({ accessToken: '' });
+
+      await expect(uploadBackup()).rejects.toMatchObject({
+        alert: ALERT_DRIVE_AUTH_EXPIRED,
+      });
+    });
+
+    test('signInSilently TypeError network → DriveError(NO_NETWORK) (WR-01)', async () => {
+      (GoogleSignin.signInSilently as jest.Mock).mockRejectedValueOnce(
+        new TypeError('Network request failed'),
+      );
+
+      await expect(uploadBackup()).rejects.toMatchObject({
+        alert: ALERT_DRIVE_NO_NETWORK,
+      });
+    });
   });
 
   describe('listBackups', () => {
