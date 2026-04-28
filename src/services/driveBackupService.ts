@@ -98,11 +98,23 @@ export async function signOut(): Promise<void> {
   await GoogleSignin.signOut();
 }
 
-/** Pre-flight: re-trigger silentSignIn para refrescar el token (Pitfall #1). */
+/** Pre-flight: re-trigger silentSignIn para refrescar el token (Pitfall #1).
+ *  WR-01: errores del SDK (sesión revocada, token vencido, refresh failure) se
+ *  mapean a DriveError tipado para que la UI muestre el Alert correcto en vez
+ *  del fallback genérico. */
 async function getDriveAccessToken(): Promise<string> {
-  await GoogleSignin.signInSilently();
-  const { accessToken } = await GoogleSignin.getTokens();
-  return accessToken;
+  try {
+    await GoogleSignin.signInSilently();
+    const { accessToken } = await GoogleSignin.getTokens();
+    if (!accessToken) throw new DriveError(ALERT_DRIVE_AUTH_EXPIRED);
+    return accessToken;
+  } catch (err) {
+    if (err instanceof DriveError) throw err;
+    if (err instanceof TypeError && /network/i.test(err.message)) {
+      throw new DriveError(ALERT_DRIVE_NO_NETWORK, err);
+    }
+    throw new DriveError(ALERT_DRIVE_AUTH_EXPIRED, err);
+  }
 }
 
 // ─── Drive list / find ───────────────────────────────────────────────
