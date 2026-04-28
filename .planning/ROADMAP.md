@@ -52,12 +52,12 @@ Plans:
   3. El usuario puede ver la lista de backups disponibles en su Drive y seleccionar uno para restaurar, con modal de confirmación que muestra la fecha del backup y advertencia de que reemplazará los datos actuales
   4. El usuario puede desconectar su cuenta Google (sign out) desde Settings
   5. Cuando falla una operación de Drive (sin red, token expirado, quota excedida), el usuario ve un mensaje con la causa del error y una acción sugerida — no un crash silencioso
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Google OAuth setup — dependency install, app.json config plugin, Google Cloud Console client ID, useSettingsStore auth fields
-- [ ] 03-02: Drive service and backup upload — driveBackupService.ts, promote buildBackupData/parseAndValidate to exports, upload flow, last backup timestamp
-- [ ] 03-03: Restore flow and Settings UI — backup list, restore with confirmation modal, sign-out, error handling, Settings screen Drive section
+- [x] 03-01-PLAN.md — Google OAuth bootstrap: install @react-native-google-signin/google-signin@16.1.2, app.json plugin + ios.bundleIdentifier, ALERT_DRIVE_* constants, useSettingsStore auth fields, googleAuth.ts service, App.tsx silent sign-in startup hook _(code-complete 2026-04-28; runtime auth bloqueado hasta GCP Console setup — ver 03-01-SUMMARY.md)_
+- [ ] 03-02-PLAN.md — Drive transport + Settings UI: promote backupService internals to named exports, driveRetention.ts pure function (Time Machine policy), driveBackupService.ts (signIn/signOut/upload/list/error mapping with mocked tests), LoadingOverlay component, SettingsScreen "Backup en la nube" section (Connect + Backup ahora + Sign-out + last-backup caption)
+- [ ] 03-03-PLAN.md — Restore flow + navigation: driveBackupService.restoreFromBackup with pre-restore safety cache (D-19), RestoreFromDriveScreen (loading/empty/error/loaded + preview + confirm), wire RestoreFromDrive route in App.tsx, replace SettingsScreen placeholder
 
 ## Progress
 
@@ -66,6 +66,6 @@ Phases execute in order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Bug Fixes | 0/2 | Not started | - |
-| 2. Tech Debt | 0/3 | Not started | - |
-| 3. Google Drive Backup | 0/3 | Not started | - |
+| 1. Bug Fixes | 2/2 | Complete | - |
+| 2. Tech Debt | 3/3 | Complete | - |
+| 3. Google Drive Backup | 1/3 | In progress | - |
