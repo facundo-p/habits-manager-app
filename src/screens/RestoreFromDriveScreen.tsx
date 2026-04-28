@@ -23,12 +23,21 @@ import {
   ALERT_DRIVE_RESTORE_CONFIRM,
   ALERT_DRIVE_RESTORE_SUCCESS,
   ALERT_DRIVE_GENERIC,
+  RESTORE_SCREEN_TITLE,
+  RESTORE_SCREEN_LOADING,
+  RESTORE_SCREEN_OVERLAY_READING,
+  RESTORE_SCREEN_OVERLAY_RESTORING,
+  EMPTY_DRIVE_BACKUPS,
+  ERROR_DRIVE_LOAD,
 } from '../config/constants';
 import { styles, colors } from './RestoreFromDriveScreen.styles';
 import { iconDefaults } from '../styles/ui.styles';
 
 type Status = 'loading' | 'empty' | 'error' | 'loaded';
-type OverlayMsg = null | 'Leyendo backup...' | 'Restaurando datos...';
+type OverlayMsg =
+  | null
+  | typeof RESTORE_SCREEN_OVERLAY_READING
+  | typeof RESTORE_SCREEN_OVERLAY_RESTORING;
 
 interface RowProps { file: drive.DriveBackupFile; onPress: () => void; disabled?: boolean }
 function BackupRow({ file, onPress, disabled = false }: RowProps) {
@@ -58,15 +67,15 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <View className={styles.errorContainer}>
       <WifiOff size={48} color={colors.rose400} strokeWidth={iconDefaults.strokeWidth} />
-      <Text className={styles.errorHeading}>No se pudo cargar la lista</Text>
-      <Text className={styles.errorBody}>Verificá tu conexión e intentá de nuevo.</Text>
+      <Text className={styles.errorHeading}>{ERROR_DRIVE_LOAD.heading}</Text>
+      <Text className={styles.errorBody}>{ERROR_DRIVE_LOAD.body}</Text>
       <Pressable
         className={styles.errorRetryButton}
         onPress={onRetry}
         accessibilityRole="button"
         accessibilityLabel="Reintentar carga de backups"
       >
-        <Text className={styles.errorRetryButtonText}>Reintentar</Text>
+        <Text className={styles.errorRetryButtonText}>{ERROR_DRIVE_LOAD.retryLabel}</Text>
       </Pressable>
     </View>
   );
@@ -111,7 +120,7 @@ export function RestoreFromDriveScreen() {
   }, []);
 
   const performRestore = useCallback(async (payload: drive.RestorePayload) => {
-    setOverlayMsg('Restaurando datos...');
+    setOverlayMsg(RESTORE_SCREEN_OVERLAY_RESTORING);
     try {
       await drive.applyRestore(payload);
       const today = new Date().toISOString().slice(0, 10);
@@ -134,7 +143,7 @@ export function RestoreFromDriveScreen() {
   const previewAndConfirm = useCallback(async (file: drive.DriveBackupFile) => {
     if (isPreparing) return; // WR-04: single-download invariant
     setIsPreparing(true);
-    setOverlayMsg('Leyendo backup...');
+    setOverlayMsg(RESTORE_SCREEN_OVERLAY_READING);
     try {
       const payload = await drive.prepareRestore(file.id);
       if (!mountedRef.current) return; // WR-03
@@ -169,21 +178,21 @@ export function RestoreFromDriveScreen() {
   return (
     <View className={styles.container}>
       <AppScreenHeader
-        title="Restaurar desde Drive"
+        title={RESTORE_SCREEN_TITLE}
         onBack={() => navigation.goBack()}
         showSettings={false}
       />
       {status === 'loading' && (
         <View className={styles.loading}>
           <ActivityIndicator size="large" color={colors.amber600} />
-          <Text className={styles.loadingCaption}>Cargando backups...</Text>
+          <Text className={styles.loadingCaption}>{RESTORE_SCREEN_LOADING}</Text>
         </View>
       )}
       {status === 'empty' && (
         <View className={styles.emptyContainer}>
           <CloudOff size={48} color={colors.amber400} strokeWidth={iconDefaults.strokeWidth} />
-          <Text className={styles.emptyHeading}>No hay backups todavía</Text>
-          <Text className={styles.emptyBody}>Hacé tu primer backup desde Ajustes.</Text>
+          <Text className={styles.emptyHeading}>{EMPTY_DRIVE_BACKUPS.heading}</Text>
+          <Text className={styles.emptyBody}>{EMPTY_DRIVE_BACKUPS.body}</Text>
         </View>
       )}
       {status === 'error' && <ErrorState onRetry={() => void loadList()} />}

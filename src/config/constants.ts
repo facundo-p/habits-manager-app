@@ -321,3 +321,22 @@ export const ALERT_DRIVE_GENERIC = {
   message: 'No pudimos completar la operación. Intentá de nuevo en unos minutos.',
   retry: true,
 } as const;
+
+// ─── Restore From Drive Screen — copy estática (IN-01) ──────────────
+// Centralizamos los strings UI fijos de la pantalla para aislar copy changes.
+// Los strings templated (con {fecha}, {N}, {M}...) se construyen en el call site.
+export const RESTORE_SCREEN_TITLE = 'Restaurar desde Drive';
+export const RESTORE_SCREEN_LOADING = 'Cargando backups...';
+export const RESTORE_SCREEN_OVERLAY_READING = 'Leyendo backup...';
+export const RESTORE_SCREEN_OVERLAY_RESTORING = 'Restaurando datos...';
+
+export const EMPTY_DRIVE_BACKUPS = {
+  heading: 'No hay backups todavía',
+  body: 'Hacé tu primer backup desde Ajustes.',
+} as const;
+
+export const ERROR_DRIVE_LOAD = {
+  heading: 'No se pudo cargar la lista',
+  body: 'Verificá tu conexión e intentá de nuevo.',
+  retryLabel: 'Reintentar',
+} as const;
