@@ -13,4 +13,8 @@ module.exports = {
   testMatch: ['<rootDir>/src/__tests__/**/*.test.ts'],
   automock: false,
   transformIgnorePatterns: ['node_modules/(?!(expo-sqlite|expo-crypto)/)'],
+  moduleNameMapper: {
+    // Redirige el subpath 'expo-file-system/legacy' al mock manual de expo-file-system.
+    '^expo-file-system/legacy$': '<rootDir>/__mocks__/expo-file-system.ts',
+  },
 };
