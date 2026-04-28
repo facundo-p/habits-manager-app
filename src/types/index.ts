@@ -141,6 +141,7 @@ export interface HabitArea {
 export type RootStackParamList = {
   Main: undefined;
   Ajustes: undefined;
+  RestoreFromDrive: undefined;
 };
 
 export type RootTabParamList = {

@@ -16,6 +16,7 @@ import { DailySheetScreen } from './src/screens/DailySheetScreen';
 import { HabitLibraryScreen } from './src/screens/HabitLibraryScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { RestoreFromDriveScreen } from './src/screens/RestoreFromDriveScreen';
 import { ROUTES } from './src/config/constants';
 import { tabBarTheme, iconDefaults, colors } from './src/styles/ui.styles';
 import { initDatabase } from './src/services/db';
@@ -140,6 +141,11 @@ export default function App() {
               name={ROUTES.SETTINGS as 'Ajustes'}
               component={SettingsScreen}
               options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="RestoreFromDrive"
+              component={RestoreFromDriveScreen}
+              options={{ headerShown: false, animation: 'slide_from_right' }}
             />
           </Stack.Navigator>
         </AppBackground>
