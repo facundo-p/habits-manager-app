@@ -30,14 +30,15 @@ import { iconDefaults } from '../styles/ui.styles';
 type Status = 'loading' | 'empty' | 'error' | 'loaded';
 type OverlayMsg = null | 'Leyendo backup...' | 'Restaurando datos...';
 
-interface RowProps { file: drive.DriveBackupFile; onPress: () => void }
-function BackupRow({ file, onPress }: RowProps) {
+interface RowProps { file: drive.DriveBackupFile; onPress: () => void; disabled?: boolean }
+function BackupRow({ file, onPress, disabled = false }: RowProps) {
   const dateLabel = formatDateEs(new Date(file.createdTime));
   const sizeLabel = formatSize(file.size);
   return (
     <Pressable
       className={styles.itemRow}
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={`Restaurar backup del ${dateLabel}, ${sizeLabel}`}
     >
@@ -79,6 +80,10 @@ export function RestoreFromDriveScreen() {
   const [status, setStatus] = useState<Status>('loading');
   const [files, setFiles] = useState<drive.DriveBackupFile[]>([]);
   const [overlayMsg, setOverlayMsg] = useState<OverlayMsg>(null);
+  // WR-04: belt-and-suspenders single-download guard. El LoadingOverlay Modal
+  // ya bloquea la mayoría de doble-tap, pero su animación fade deja una ventana
+  // de ~250ms en algunas versiones de RN.
+  const [isPreparing, setIsPreparing] = useState(false);
 
   // WR-03: guard contra setState después de unmount (back-press durante async work)
   const mountedRef = useRef(true);
@@ -127,6 +132,8 @@ export function RestoreFromDriveScreen() {
   }, [fetchHabitsForDate, fetchLibrary, showError]);
 
   const previewAndConfirm = useCallback(async (file: drive.DriveBackupFile) => {
+    if (isPreparing) return; // WR-04: single-download invariant
+    setIsPreparing(true);
     setOverlayMsg('Leyendo backup...');
     try {
       const payload = await drive.prepareRestore(file.id);
@@ -154,8 +161,10 @@ export function RestoreFromDriveScreen() {
       if (!mountedRef.current) return; // WR-03
       setOverlayMsg(null);
       showError(err);
+    } finally {
+      if (mountedRef.current) setIsPreparing(false); // WR-04
     }
-  }, [performRestore, showError]);
+  }, [isPreparing, performRestore, showError]);
 
   return (
     <View className={styles.container}>
@@ -182,7 +191,13 @@ export function RestoreFromDriveScreen() {
         <FlatList
           data={files}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <BackupRow file={item} onPress={() => void previewAndConfirm(item)} />}
+          renderItem={({ item }) => (
+            <BackupRow
+              file={item}
+              onPress={() => void previewAndConfirm(item)}
+              disabled={isPreparing}
+            />
+          )}
           ItemSeparatorComponent={Separator}
         />
       )}
