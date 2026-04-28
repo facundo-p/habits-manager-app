@@ -57,7 +57,7 @@ Plans:
 Plans:
 - [x] 03-01-PLAN.md — Google OAuth bootstrap: install @react-native-google-signin/google-signin@16.1.2, app.json plugin + ios.bundleIdentifier, ALERT_DRIVE_* constants, useSettingsStore auth fields, googleAuth.ts service, App.tsx silent sign-in startup hook _(code-complete 2026-04-28; runtime auth bloqueado hasta GCP Console setup — ver 03-01-SUMMARY.md)_
 - [x] 03-02-PLAN.md — Drive transport + Settings UI: promote backupService internals to named exports, driveRetention.ts pure function (Time Machine policy), driveBackupService.ts (signIn/signOut/upload/list/error mapping with mocked tests), LoadingOverlay component, SettingsScreen "Backup en la nube" section (Connect + Backup ahora + Sign-out + last-backup caption)
-- [ ] 03-03-PLAN.md — Restore flow + navigation: driveBackupService.restoreFromBackup with pre-restore safety cache (D-19), RestoreFromDriveScreen (loading/empty/error/loaded + preview + confirm), wire RestoreFromDrive route in App.tsx, replace SettingsScreen placeholder
+- [x] 03-03-PLAN.md — Restore flow + navigation: driveBackupService.restoreFromBackup with pre-restore safety cache (D-19), RestoreFromDriveScreen (loading/empty/error/loaded + preview + confirm), wire RestoreFromDrive route in App.tsx, replace SettingsScreen placeholder
 
 ## Progress
 
