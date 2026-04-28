@@ -35,20 +35,21 @@ describe('selectFilesToPrune', () => {
     expect(selectFilesToPrune(files, NOW, 30)).toEqual([]);
   });
 
-  test('con 35 diarios consecutivos: conserva 30 recientes + 1 mensual (oldest), prunea exactamente 4', () => {
+  test('con 35 diarios consecutivos: conserva recientes (age<=recentMs) + 1 mensual (oldest), prunea exactamente 3', () => {
     const files = Array.from({ length: 35 }, (_, i) => makeFile(i));
     const pruned = selectFilesToPrune(files, NOW, 30);
 
-    // Los 30 días más recientes (idx 0..29) NUNCA se prunean (regla recentDays).
-    const recentIds = files.slice(0, 30).map((f) => f.id);
+    // Los 31 más recientes (idx 0..30) cumplen `age <= recentDays * MS_PER_DAY` y se conservan.
+    // (idx 30 tiene age == recentMs exacto, por eso entra en "recent" — `<=` inclusivo).
+    const recentIds = files.slice(0, 31).map((f) => f.id);
     pruned.forEach((id) => expect(recentIds).not.toContain(id));
 
-    // De los 5 restantes (días 30..34, idx 30..34), todos en el mismo mes-bucket,
-    // la regla mensual conserva el MÁS ANTIGUO (idx 34) y prunea los otros 4 (idx 30..33).
-    expect(pruned).toHaveLength(4);
+    // De los 4 restantes (idx 31..34), todos caen en el mismo mes-bucket;
+    // la regla mensual conserva el MÁS ANTIGUO (idx 34) y prunea los otros 3 (idx 31..33).
+    expect(pruned).toHaveLength(3);
     const oldestId = files[34].id;
     expect(pruned).not.toContain(oldestId);
-    const expectedPruned = files.slice(30, 34).map((f) => f.id);
+    const expectedPruned = files.slice(31, 34).map((f) => f.id);
     expect(pruned.sort()).toEqual(expectedPruned.sort());
   });
 

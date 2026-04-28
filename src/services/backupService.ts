@@ -1,9 +1,12 @@
 /**
- * backupService.ts — Lógica de respaldo y restauración de datos.
+ * backupService.ts — Lógica de respaldo y restauración local de datos.
  *
  * Exportar: Lee todas las tablas, genera JSON, abre el menú nativo
  *           de compartir para que el usuario elija dónde guardarlo.
  * Importar: Selecciona archivo JSON, valida estructura, limpia + restaura.
+ *
+ * Phase 3: `buildBackupData`, `parseAndValidate` y `restoreData` se exponen
+ * como named exports para reuso por driveBackupService (transporte a Drive).
  *
  * Usa expo-file-system/legacy (compatible con Expo Go en SDK 54).
  * Delega SQL a backupRepository.
@@ -57,9 +60,9 @@ export async function importBackup(): Promise<boolean> {
   return true;
 }
 
-// ─── Helpers internos ────────────────────────────────────────────────
+// ─── API pública (consumida por exportBackup/importBackup y driveBackupService) ──
 
-async function buildBackupData(): Promise<BackupData> {
+export async function buildBackupData(): Promise<BackupData> {
   const [habits, performed_habits, mood_entries, daily_assignments] = await Promise.all([
     backupRepo.readAllHabits(),
     backupRepo.readAllPerformed(),
@@ -82,7 +85,7 @@ async function buildBackupData(): Promise<BackupData> {
  * Reemplaza el patrón anterior (cast a Partial + cast final completo) por narrowing en runtime
  * (DEBT-02 alcance ampliado D-04). Mensajes de error en español preservados.
  */
-function parseAndValidate(json: string): BackupData {
+export function parseAndValidate(json: string): BackupData {
   let raw: unknown;
   try {
     raw = JSON.parse(json);
@@ -120,7 +123,7 @@ function parseAndValidate(json: string): BackupData {
   };
 }
 
-async function restoreData(data: BackupData): Promise<void> {
+export async function restoreData(data: BackupData): Promise<void> {
   await backupRepo.restoreAllData(
     data.habits,
     data.performed_habits,
