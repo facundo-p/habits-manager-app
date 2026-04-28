@@ -16,6 +16,7 @@
  *
  * NO toca SQL — eso vive en backupRepository (vía backupService.restoreData).
  */
+import * as FileSystem from 'expo-file-system/legacy';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import {
   BACKUP_FILE_PREFIX,
@@ -26,7 +27,8 @@ import {
   ALERT_DRIVE_PERMISSION,
   ALERT_DRIVE_GENERIC,
 } from '../config/constants';
-import { buildBackupData } from './backupService';
+import { buildBackupData, parseAndValidate, restoreData } from './backupService';
+import type { BackupData } from '../types';
 import { selectFilesToPrune } from '../utils/driveRetention';
 
 // ─── Tipos públicos ──────────────────────────────────────────────────
@@ -304,4 +306,107 @@ async function fetchOrFail(url: string, init?: RequestInit): Promise<Response> {
     throw new DriveError(await mapDriveError(null, res));
   }
   return res;
+}
+
+// ─── Restore (DRIVE-04 + DRIVE-05 + D-19) ───────────────────────────
+
+/**
+ * Conteos por tabla derivados del backup parseado. Se usan para construir el
+ * Alert de confirmación (D-18) sin volver a parsear en la UI.
+ */
+export interface RestoreCounts {
+  habits: number;
+  performed_habits: number;
+  mood_entries: number;
+  daily_assignments: number;
+}
+
+/**
+ * Resultado de prepareRestore: la data parseada + conteos. La UI muestra los
+ * conteos en el Alert destructivo y, en confirm, pasa el MISMO payload a
+ * applyRestore (evita un segundo download).
+ */
+export interface RestorePayload {
+  data: BackupData;
+  counts: RestoreCounts;
+  /** ISO timestamp del backup tal cual lo serializa buildBackupData. */
+  exportedAt: string;
+}
+
+/**
+ * Descarga + parsea + valida el backup. NO toca DB, NO escribe cache, NO corre
+ * cleanup. Si parseAndValidate falla, se re-lanza como DriveError(GENERIC) y
+ * la DB queda intacta (UI-SPEC Risk Note #4 + warning #9).
+ *
+ * Llamado primero por la pantalla para mostrar el Alert de confirmación con
+ * conteos derivados de `counts`.
+ */
+export async function prepareRestore(fileId: string): Promise<RestorePayload> {
+  const json = await downloadBackup(fileId);
+  let data: BackupData;
+  try {
+    data = parseAndValidate(json);
+  } catch (err) {
+    console.error('[prepareRestore] parseAndValidate failed', err);
+    throw new DriveError(ALERT_DRIVE_GENERIC, err);
+  }
+  return {
+    data,
+    counts: {
+      habits: data.habits.length,
+      performed_habits: data.performed_habits.length,
+      mood_entries: data.mood_entries.length,
+      daily_assignments: data.daily_assignments.length,
+    },
+    exportedAt: data.exportedAt,
+  };
+}
+
+/**
+ * Aplica el restore. Orden estricto:
+ *   1. writePreRestoreCache(buildBackupData())   — D-19 safety cache
+ *   2. restoreData(payload.data)                 — mutar DB (atómico via withTransactionAsync)
+ *   3. cleanupOldPreRestoreCache()               — SÓLO en éxito (warning #9)
+ *
+ * Si writePreRestoreCache falla, log y continuar (best-effort, D-19).
+ * Si restoreData throws, re-lanzar como DriveError(GENERIC); cleanup NO corre
+ * para que el cache previo sobreviva y el usuario pueda recuperar.
+ */
+export async function applyRestore(payload: RestorePayload): Promise<void> {
+  await writePreRestoreCache(); // best-effort: nunca throws
+  try {
+    await restoreData(payload.data);
+  } catch (err) {
+    console.error('[applyRestore] restoreData threw — cache previo conservado', err);
+    throw new DriveError(ALERT_DRIVE_GENERIC, err);
+  }
+  // Cleanup SÓLO post-success: si restoreData lanzó, no llegamos acá.
+  await cleanupOldPreRestoreCache();
+}
+
+async function writePreRestoreCache(): Promise<void> {
+  try {
+    const snapshot = await buildBackupData();
+    const iso = new Date().toISOString().replace(/[:.]/g, '-');
+    const path = `${FileSystem.cacheDirectory}cozyhabits-pre-restore-${iso}.json`;
+    await FileSystem.writeAsStringAsync(path, JSON.stringify(snapshot), { encoding: 'utf8' });
+  } catch (err) {
+    // D-19: pre-restore cache es red de seguridad. Si falla, NO bloquear restore.
+    console.warn('[writePreRestoreCache] no se pudo escribir cache de seguridad', err);
+  }
+}
+
+async function cleanupOldPreRestoreCache(): Promise<void> {
+  try {
+    const dir = FileSystem.cacheDirectory;
+    if (!dir) return;
+    const entries = await FileSystem.readDirectoryAsync(dir);
+    for (const name of entries) {
+      if (name.startsWith('cozyhabits-pre-restore-') && name.endsWith('.json')) {
+        await FileSystem.deleteAsync(`${dir}${name}`, { idempotent: true });
+      }
+    }
+  } catch (err) {
+    console.warn('[cleanupOldPreRestoreCache] cleanup skipped', err);
+  }
 }
