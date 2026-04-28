@@ -73,6 +73,7 @@ describe('restore flow (prepareRestore + applyRestore)', () => {
     readDirectoryAsyncMock.mockResolvedValue([
       'cozyhabits-pre-restore-2026-04-01-old.json',
       'cozyhabits-pre-restore-2026-03-01-old.json',
+      'cozyhabits-pre-restore-2026-04-27T00-00-00-000Z.json', // el más reciente (recién escrito)
       'unrelated.json',
     ]);
     deleteAsyncMock.mockResolvedValue(undefined);
@@ -135,7 +136,7 @@ describe('restore flow (prepareRestore + applyRestore)', () => {
     expect(restoreDataMock).toHaveBeenCalledWith(SAMPLE_BACKUP);
   });
 
-  test('applyRestore: cleanup borra sólo cozyhabits-pre-restore-*.json', async () => {
+  test('applyRestore: cleanup borra sólo cozyhabits-pre-restore-*.json y preserva el más reciente (WR-02)', async () => {
     const payload = {
       data: SAMPLE_BACKUP,
       counts: { habits: 1, performed_habits: 0, mood_entries: 0, daily_assignments: 0 },
@@ -144,11 +145,18 @@ describe('restore flow (prepareRestore + applyRestore)', () => {
     await applyRestore(payload);
 
     const deletePaths = (deleteAsyncMock as jest.Mock).mock.calls.map((c) => c[0]);
+    // Los pre-restore caches viejos sí se borran
     expect(deletePaths).toEqual(expect.arrayContaining([
       'file:///cache/cozyhabits-pre-restore-2026-04-01-old.json',
       'file:///cache/cozyhabits-pre-restore-2026-03-01-old.json',
     ]));
+    // Archivos no relacionados nunca se tocan
     expect(deletePaths).not.toContain('file:///cache/unrelated.json');
+    // WR-02: el cache más reciente (el que acabamos de escribir) DEBE sobrevivir
+    // para que el usuario pueda revertir si algo salió mal después del restore.
+    expect(deletePaths).not.toContain(
+      'file:///cache/cozyhabits-pre-restore-2026-04-27T00-00-00-000Z.json',
+    );
   });
 
   test('applyRestore: cache write falla → restore CONTINÚA (best-effort, D-19)', async () => {
