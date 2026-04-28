@@ -408,15 +408,21 @@ async function writePreRestoreCache(): Promise<void> {
   }
 }
 
+/** WR-02: borra TODOS los pre-restore caches EXCEPTO el más reciente. El más
+ *  reciente (el que se escribió en writePreRestoreCache para este restore) debe
+ *  sobrevivir para honrar la promesa de la UI: "Tus datos previos quedaron
+ *  respaldados en el dispositivo por si querés revertir." Los timestamps ISO en
+ *  el nombre se ordenan lexicográficamente igual que cronológicamente. */
 async function cleanupOldPreRestoreCache(): Promise<void> {
   try {
     const dir = FileSystem.cacheDirectory;
     if (!dir) return;
-    const entries = await FileSystem.readDirectoryAsync(dir);
-    for (const name of entries) {
-      if (name.startsWith('cozyhabits-pre-restore-') && name.endsWith('.json')) {
-        await FileSystem.deleteAsync(`${dir}${name}`, { idempotent: true });
-      }
+    const entries = (await FileSystem.readDirectoryAsync(dir))
+      .filter((n) => n.startsWith('cozyhabits-pre-restore-') && n.endsWith('.json'))
+      .sort();
+    const toDelete = entries.slice(0, -1); // preserva el más reciente
+    for (const name of toDelete) {
+      await FileSystem.deleteAsync(`${dir}${name}`, { idempotent: true });
     }
   } catch (err) {
     console.warn('[cleanupOldPreRestoreCache] cleanup skipped', err);
