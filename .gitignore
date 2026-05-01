@@ -35,6 +35,7 @@ yarn-error.*
 *.swp
 *.swo
 *.apk
+build-output.apk
 
 # C/C++ stray builds
 a.out
