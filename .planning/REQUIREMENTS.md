@@ -29,6 +29,21 @@
 - [x] **DRIVE-07**: Usuario puede desconectar su cuenta de Google (sign out + revocar acceso)
 - [x] **DRIVE-08**: Errores de Drive (quota, auth, red) se muestran al usuario con mensaje accionable
 
+### Habit Creation Audit & Duplicate Cleanup (Phase 4)
+
+- [ ] **REQ-04-01**: `ensureAssignmentsForDate` no duplica al re-correr; el guard `countByDate > 0` se mantiene y la propagación de visibilidad weekly/monthly no introduce nuevas inserciones
+- [ ] **REQ-04-02**: `addAssignmentForHabit` es idempotente; el partial UNIQUE INDEX (REQ-04-05) actúa como defensa en profundidad si el guard falla
+- [ ] **REQ-04-03**: `restoreData` (backupService) deduplica el array de `daily_assignments` con la misma heurística D-03 (completed > has_performed > original-position) antes del bulk insert para evitar fallar el UNIQUE INDEX (driveBackupService.applyRestore reusa este path)
+- [ ] **REQ-04-04**: Migration v1 borra rows duplicadas respetando heurística D-03 (is_completed DESC → has performed_habit DESC → rowid ASC) en una sola sentencia DELETE con CTE+ROW_NUMBER
+- [ ] **REQ-04-05**: Migration v1 crea partial UNIQUE INDEX `idx_unique_habit_date` ON `daily_assignments(habit_id, date) WHERE habit_id IS NOT NULL`
+- [ ] **REQ-04-06**: Migration v1 es idempotente (corre 2x sin error gracias a `PRAGMA user_version`); orden atómico (D-08) detect → DELETE losers → CREATE INDEX → set user_version, todo en una transacción
+- [ ] **REQ-04-07**: Migration v1 falla silenciosamente con `console.error('[migration v1] ...')` y NO bloquea el boot (D-06); rollback automático preserva la DB en estado pre-migración
+- [ ] **REQ-04-08**: UNIQUE INDEX excluye `habit_id IS NULL` permitiendo múltiples spontaneous el mismo día (test ya existe en `dailyAssignments.test.ts:343-352`)
+- [ ] **REQ-04-09**: UNIQUE INDEX rechaza duplicados de hábitos regulares post-migración (defensa en profundidad — test ya existe en `dailyAssignments.test.ts:334-341`)
+- [ ] **REQ-04-10**: Hábitos weekly visibles todos los días de la semana ISO actual; completion 1x por período (D-01 Opción B: una row por día, completion propaga a todas las rows del período actual)
+- [ ] **REQ-04-11**: Hábitos monthly visibles todos los días del mes calendario actual; completion 1x por período (D-01/D-02 Opción B)
+- [ ] **REQ-04-12**: `getPeriodKey(datePrefix, frequency)` retorna keys correctas en cruces de año (W53/W01), de mes (último día → primero del siguiente) y semana ISO (domingo → lunes); algoritmo Thursday-anchor para ISO 8601
+
 ## v2 Requirements
 
 ### Cloud Backup Improvements
@@ -80,12 +95,24 @@
 | DRIVE-06 | Phase 3 | Complete |
 | DRIVE-07 | Phase 3 | Complete |
 | DRIVE-08 | Phase 3 | Complete |
+| REQ-04-01 | Phase 4 | Pending |
+| REQ-04-02 | Phase 4 | Pending |
+| REQ-04-03 | Phase 4 | Pending |
+| REQ-04-04 | Phase 4 | Pending |
+| REQ-04-05 | Phase 4 | Pending |
+| REQ-04-06 | Phase 4 | Pending |
+| REQ-04-07 | Phase 4 | Pending |
+| REQ-04-08 | Phase 4 | Pending |
+| REQ-04-09 | Phase 4 | Pending |
+| REQ-04-10 | Phase 4 | Pending |
+| REQ-04-11 | Phase 4 | Pending |
+| REQ-04-12 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 15 total
-- Mapped to phases: 15
+- v1 requirements: 27 total (15 originales + 12 Phase 4)
+- Mapped to phases: 27
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after roadmap creation*
+*Last updated: 2026-05-01 — added REQ-04-01..REQ-04-12 for Phase 4*

@@ -70,14 +70,17 @@ Phases execute in order: 1 → 2 → 3 → 4
 | 1. Bug Fixes | 2/2 | Complete | - |
 | 2. Tech Debt | 3/3 | Complete | - |
 | 3. Google Drive Backup | 1/3 | In progress | - |
-| 4. Habit Creation Audit & Duplicate Cleanup | 0/0 | Not planned | - |
+| 4. Habit Creation Audit & Duplicate Cleanup | 0/4 | Planned | - |
 
 ### Phase 4: Habit Creation Audit & Duplicate Cleanup
 
 **Goal:** Auditar exhaustivamente todos los flujos de creación automática de daily assignments — rollover diario, inicio de semana, inicio de mes, creación manual de hábito en biblioteca, restauración de backups — identificar dónde se generan duplicados, corregir el código en cada flujo y diseñar una migración de DB que limpie los duplicados ya persistidos en bases existentes para dejarlas consistentes.
-**Requirements**: TBD (a definir en /gsd-discuss-phase 4)
+**Requirements**: REQ-04-01, REQ-04-02, REQ-04-03, REQ-04-04, REQ-04-05, REQ-04-06, REQ-04-07, REQ-04-08, REQ-04-09, REQ-04-10, REQ-04-11, REQ-04-12
 **Depends on:** Phase 3
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 4 to break down)
+- [ ] 04-01-PLAN.md — periodHelpers (REQ-04-12) + dedupeAssignmentsArray (REQ-04-03 utility) + Wave 0 test infrastructure (createPreMigrationTestDatabase, seedDuplicates, insertTestPerformed)
+- [ ] 04-02-PLAN.md — Migration v1 versionada via PRAGMA user_version: dedupe via CTE+ROW_NUMBER (REQ-04-04) + partial UNIQUE INDEX (REQ-04-05/08/09) + atomicity/idempotency/silent failure (REQ-04-06/07) + integración en initDatabase y verificación de boot order
+- [ ] 04-03-PLAN.md — Visibility-aware reads (REQ-04-10/11): DailyItem.isCompletedForPeriod via single aggregated query + completion propagation a período (D-01 Opción B) + dev invariant warn (REQ-04-01) + idempotency confirmation (REQ-04-02)
+- [ ] 04-04-PLAN.md — Restore pre-clean en backupService (REQ-04-03 integration) + ARCHITECTURE.md doc-fix (Regla 3.4 CLAUDE.md) + 04-VALIDATION.md per-task map filled (nyquist_compliant: true)
