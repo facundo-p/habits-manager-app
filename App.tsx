@@ -3,6 +3,7 @@ import './global.css';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { Merriweather_700Bold } from '@expo-google-fonts/merriweather';
 import { Lato_400Regular } from '@expo-google-fonts/lato';
@@ -139,6 +140,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <StatusBar style="dark" />
       <NavigationContainer>
         <AppBackground>
           <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
