@@ -159,3 +159,94 @@ export function insertTestAssignment(db: Database.Database, opts: TestAssignment
     opts.is_spontaneous ?? 0,
   );
 }
+
+// ─── Variante pre-migración (sin UNIQUE INDEX) ───────────────────────────────
+//
+// REQ-04-04..REQ-04-07: para testear la migración v1, los tests necesitan
+// sembrar duplicados en la DB. El UNIQUE INDEX presente en createTestDatabase()
+// rechaza esos seeds. Esta variante crea el mismo schema PERO omite el index,
+// emulando el estado de prod pre-migración.
+
+export function createPreMigrationTestDatabase(): Database.Database {
+  _db = new Database(':memory:');
+  _db.pragma('foreign_keys = ON');
+  _db.exec(SQL_CREATE_HABITS);
+  _db.exec(SQL_CREATE_PERFORMED);
+  _db.exec(SQL_CREATE_MOODS);
+  _db.exec(SQL_CREATE_ASSIGNMENTS);
+  // NOTA: SQL_UNIQUE_INDEX intencionalmente NO se ejecuta aquí.
+  setMockDatabase(_db);
+  return _db;
+}
+
+// ─── Helpers de seed adicionales ─────────────────────────────────────────────
+
+export interface TestPerformedOpts {
+  id: string;
+  habit_id: string;
+  timestamp: string; // 'YYYY-MM-DD HH:MM:SS'
+  points_earned?: number;
+  habit_description?: string | null;
+  categories_used?: string | null;
+}
+
+/** Inserta un performed_habit directamente (bypass service). */
+export function insertTestPerformed(db: Database.Database, opts: TestPerformedOpts): void {
+  db.prepare(`
+    INSERT INTO performed_habits
+      (id, habit_id, timestamp, points_earned, habit_description, categories_used)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(
+    opts.id,
+    opts.habit_id,
+    opts.timestamp,
+    opts.points_earned ?? 1,
+    opts.habit_description ?? null,
+    opts.categories_used ?? null,
+  );
+}
+
+export interface DuplicateSeedOpts {
+  /** Cuántos duplicados crear (default 2). */
+  count?: number;
+  /** Si true, marca al menos uno como is_completed=1. */
+  withCompleted?: boolean;
+  /** Si true, también inserta un performed_habit linked. */
+  withPerformedLink?: boolean;
+}
+
+/**
+ * Inserta `count` duplicados en (habit_id, date). El primero NO está completado;
+ * si withCompleted, el segundo SÍ. Si withPerformedLink, agrega un performed_habit.
+ *
+ * REQUIERE que la DB sea creada con createPreMigrationTestDatabase()
+ * (createTestDatabase normal rechazaría por UNIQUE INDEX).
+ */
+export function seedDuplicates(
+  db: Database.Database,
+  habitId: string,
+  date: string,
+  opts: DuplicateSeedOpts = {},
+): string[] {
+  const count = opts.count ?? 2;
+  const ids: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const id = `dup-${habitId}-${date}-${i}`;
+    insertTestAssignment(db, {
+      id,
+      habit_id: habitId,
+      date,
+      snapshot_name: `Dup ${i}`,
+      is_completed: opts.withCompleted && i === count - 1 ? 1 : 0,
+    });
+    ids.push(id);
+  }
+  if (opts.withPerformedLink) {
+    insertTestPerformed(db, {
+      id: `perf-${habitId}-${date}`,
+      habit_id: habitId,
+      timestamp: `${date} 10:00:00`,
+    });
+  }
+  return ids;
+}
