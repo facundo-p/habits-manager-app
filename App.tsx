@@ -100,6 +100,12 @@ export default function App() {
   });
 
   useEffect(() => {
+    // REQ-04-06 — INVARIANTE: El orden initDatabase -> checkAndBackfillHistory es crítico.
+    // initDatabase corre runMigrations (PRAGMA user_version + UNIQUE INDEX).
+    // PROHIBIDO importar/llamar funciones del subsistema de assignments (repository
+    // o service de daily_assignments) desde el render-phase de App.tsx antes de
+    // que esta cadena resuelva. Si necesitás un nuevo hook al boot, encadenalo como
+    // `.then(() => tuFuncion())` después de checkAndBackfillHistory.
     initDatabase()
       .then(() => checkAndBackfillHistory())
       .then(() => console.log('DB inicializada y backfill completado'))
