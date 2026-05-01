@@ -13,6 +13,7 @@ import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
 import type { Habit, DailyHabit, DailyStats } from '../types';
 import { buildStats } from '../utils/statsHelpers';
+import { VALID_AREA_IDS } from '../config/constants';
 
 // ─── Consultas ──────────────────────────────────────────────────────
 
@@ -99,6 +100,12 @@ export async function createHabit(
   basePoints: number,
   categories: string[],
 ): Promise<string> {
+  const invalidIds = categories.filter((id) => !VALID_AREA_IDS.has(id));
+  if (invalidIds.length > 0) {
+    throw new Error(
+      `createHabit: categorias invalidas — ${invalidIds.join(', ')}`,
+    );
+  }
   return habitRepo.insert(name, frequency, basePoints, JSON.stringify(categories));
 }
 
@@ -109,6 +116,12 @@ export async function updateHabit(
   basePoints: number,
   categories: string[],
 ): Promise<void> {
+  const invalidIds = categories.filter((id) => !VALID_AREA_IDS.has(id));
+  if (invalidIds.length > 0) {
+    throw new Error(
+      `updateHabit: categorias invalidas — ${invalidIds.join(', ')}`,
+    );
+  }
   return habitRepo.update(id, name, frequency, basePoints, JSON.stringify(categories));
 }
 

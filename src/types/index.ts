@@ -64,7 +64,11 @@ export interface DailyItem {
   points: number;
   categories: string; // JSON string
   frequency: 'daily' | 'weekly' | 'monthly';
-  isCompleted: boolean;
+  isCompleted: boolean; // estado de la row del día actual
+  // REQ-04-10/11: true si HAY al menos 1 row con is_completed=1 en el período
+  // actual del item (ISO week para weekly, mes calendario para monthly).
+  // Para daily, isCompletedForPeriod === isCompleted (mismo período).
+  isCompletedForPeriod: boolean;
   isSpontaneous: boolean;
   performedHabitId: string | null;
 }
@@ -141,6 +145,7 @@ export interface HabitArea {
 export type RootStackParamList = {
   Main: undefined;
   Ajustes: undefined;
+  RestoreFromDrive: undefined;
 };
 
 export type RootTabParamList = {

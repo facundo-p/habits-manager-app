@@ -7,7 +7,9 @@
 
 import * as SQLite from 'expo-sqlite';
 import * as Crypto from 'expo-crypto';
-import { DB_NAME, SEED_HABITS, VALID_AREA_IDS } from '../config/constants';
+import { DB_NAME, SEED_HABITS } from '../config/constants';
+import { parseAndValidateCategories } from '../utils/parsing';
+import { runMigrations } from './migrations/migrationV1';
 
 let _db: SQLite.SQLiteDatabase | null = null;
 
@@ -28,6 +30,10 @@ export function generateId(): string {
 
 export function getTodayPrefix(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+export function isFutureDate(datePrefix: string): boolean {
+  return datePrefix > getTodayPrefix();
 }
 
 export function getNowTimestamp(): string {
@@ -98,6 +104,7 @@ export async function initDatabase(): Promise<void> {
   const db = await getDatabase();
   await executeSchema(db);
   await migrateSchema(db);
+  await runMigrations(db);          // REQ-04-06: versioned migrations (Phase 4)
   await sanitizeCategories(db);
   await seedHabits(db);
 }
@@ -138,41 +145,60 @@ async function migrateSchema(db: SQLite.SQLiteDatabase): Promise<void> {
 
 /**
  * Recorre habits.default_categories y performed_habits.categories_used.
- * Elimina cualquier ID que NO exista en HABIT_AREAS.
+ * Elimina cualquier ID que NO exista en VALID_AREA_IDS.
+ *
+ * Caller defensivo invocado en initDatabase() — delega en las dos
+ * funciones explícitas por tabla para mantener SQL estático y tipos
+ * por columna (DEBT-03).
  */
 async function sanitizeCategories(db: SQLite.SQLiteDatabase): Promise<void> {
-  await sanitizeTable(db, 'habits', 'default_categories');
-  await sanitizeTable(db, 'performed_habits', 'categories_used');
+  await sanitizeHabitDefaultCategories(db);
+  await sanitizePerformedCategoriesUsed(db);
 }
 
-async function sanitizeTable(
+/**
+ * Limpia habits.default_categories eliminando IDs de área inválidos.
+ * Defensivo: corre en initDatabase() y no rompe ante datos legacy.
+ * Exportada para tests directos (Wave 0).
+ */
+export async function sanitizeHabitDefaultCategories(
   db: SQLite.SQLiteDatabase,
-  table: string,
-  column: string,
 ): Promise<void> {
-  const rows = await db.getAllAsync<{ id: string; [key: string]: any }>(
-    `SELECT id, ${column} FROM ${table} WHERE ${column} IS NOT NULL`,
+  const rows = await db.getAllAsync<{ id: string; default_categories: string | null }>(
+    'SELECT id, default_categories FROM habits WHERE default_categories IS NOT NULL',
   );
-
   for (const row of rows) {
-    const cleaned = filterValidIds(row[column]);
-    if (cleaned !== row[column]) {
+    if (row.default_categories == null) continue;
+    const cleaned = JSON.stringify(parseAndValidateCategories(row.default_categories));
+    if (cleaned !== row.default_categories) {
       await db.runAsync(
-        `UPDATE ${table} SET ${column} = ? WHERE id = ?`,
+        'UPDATE habits SET default_categories = ? WHERE id = ?',
         [cleaned, row.id],
       );
     }
   }
 }
 
-function filterValidIds(json: string): string {
-  try {
-    const arr = JSON.parse(json);
-    if (!Array.isArray(arr)) return '[]';
-    const filtered = arr.filter((id: string) => VALID_AREA_IDS.has(id));
-    return JSON.stringify(filtered);
-  } catch {
-    return '[]';
+/**
+ * Limpia performed_habits.categories_used eliminando IDs de área inválidos.
+ * Defensivo: corre en initDatabase() y no rompe ante datos legacy.
+ * Exportada para tests directos (Wave 0).
+ */
+export async function sanitizePerformedCategoriesUsed(
+  db: SQLite.SQLiteDatabase,
+): Promise<void> {
+  const rows = await db.getAllAsync<{ id: string; categories_used: string | null }>(
+    'SELECT id, categories_used FROM performed_habits WHERE categories_used IS NOT NULL',
+  );
+  for (const row of rows) {
+    if (row.categories_used == null) continue;
+    const cleaned = JSON.stringify(parseAndValidateCategories(row.categories_used));
+    if (cleaned !== row.categories_used) {
+      await db.runAsync(
+        'UPDATE performed_habits SET categories_used = ? WHERE id = ?',
+        [cleaned, row.id],
+      );
+    }
   }
 }
 

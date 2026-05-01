@@ -3,6 +3,7 @@ import './global.css';
 import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { Merriweather_700Bold } from '@expo-google-fonts/merriweather';
 import { Lato_400Regular } from '@expo-google-fonts/lato';
@@ -16,11 +17,14 @@ import { DailySheetScreen } from './src/screens/DailySheetScreen';
 import { HabitLibraryScreen } from './src/screens/HabitLibraryScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { RestoreFromDriveScreen } from './src/screens/RestoreFromDriveScreen';
 import { ROUTES } from './src/config/constants';
 import { tabBarTheme, iconDefaults, colors } from './src/styles/ui.styles';
 import { initDatabase } from './src/services/db';
 import { checkAndBackfillHistory } from './src/services/assignmentService';
+import { configureGoogleSignin, silentSignInIfPossible } from './src/services/googleAuth';
 import { useHabitStore } from './src/store/useHabitStore';
+import { useSettingsStore } from './src/store/useSettingsStore';
 import type { RootStackParamList, RootTabParamList } from './src/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -97,10 +101,27 @@ export default function App() {
   });
 
   useEffect(() => {
+    // REQ-04-06 — INVARIANTE: El orden initDatabase -> checkAndBackfillHistory es crítico.
+    // initDatabase corre runMigrations (PRAGMA user_version + UNIQUE INDEX).
+    // PROHIBIDO importar/llamar funciones del subsistema de assignments (repository
+    // o service de daily_assignments) desde el render-phase de App.tsx antes de
+    // que esta cadena resuelva. Si necesitás un nuevo hook al boot, encadenalo como
+    // `.then(() => tuFuncion())` después de checkAndBackfillHistory.
     initDatabase()
       .then(() => checkAndBackfillHistory())
       .then(() => console.log('DB inicializada y backfill completado'))
       .catch((err) => console.error('Error inicializando DB:', err));
+  }, []);
+
+  useEffect(() => {
+    configureGoogleSignin();
+    silentSignInIfPossible()
+      .then((session) => {
+        if (session) {
+          useSettingsStore.getState().setGoogleEmail(session.email);
+        }
+      })
+      .catch((err) => console.error('[App] silent sign-in unexpected error:', err));
   }, []);
 
   useEffect(() => {
@@ -119,6 +140,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <StatusBar style="dark" />
       <NavigationContainer>
         <AppBackground>
           <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
@@ -127,6 +149,11 @@ export default function App() {
               name={ROUTES.SETTINGS as 'Ajustes'}
               component={SettingsScreen}
               options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="RestoreFromDrive"
+              component={RestoreFromDriveScreen}
+              options={{ headerShown: false, animation: 'slide_from_right' }}
             />
           </Stack.Navigator>
         </AppBackground>

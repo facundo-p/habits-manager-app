@@ -1,7 +1,8 @@
 /**
  * useSettingsStore.ts — Store de configuración de la app (Zustand + persist).
  *
- * Maneja preferencias de feedback sensorial, dictado de voz e idioma.
+ * Maneja preferencias de feedback sensorial, dictado de voz, idioma y
+ * el slice de auth de Google Drive (Phase 3): googleEmail + lastBackup*.
  * Persiste en un archivo JSON vía expo-file-system para sobrevivir reinicios.
  */
 
@@ -21,6 +22,14 @@ interface SettingsState {
   toggleSounds: () => void;
   toggleVoiceDictation: () => void;
   setLanguage: (lang: SupportedLanguage) => void;
+
+  // Drive auth (Phase 3)
+  googleEmail: string | null;
+  lastBackupAt: string | null;     // ISO timestamp del último backup exitoso (D-09)
+  lastBackupFileId: string | null; // Drive file ID del último backup (D-09)
+  setGoogleEmail: (email: string | null) => void;
+  setLastBackup: (at: string | null, fileId: string | null) => void;
+  clearGoogleSession: () => void;  // sign-out: limpia email; preserva lastBackup* (D-11)
 }
 
 const SETTINGS_PATH = `${FileSystem.documentDirectory}settings.json`;
@@ -60,11 +69,17 @@ export const useSettingsStore = create<SettingsState>()(
       soundsEnabled: true,
       voiceDictationEnabled: true,
       language: 'es',
+      googleEmail: null,
+      lastBackupAt: null,
+      lastBackupFileId: null,
 
       toggleHaptics: () => set((s) => ({ hapticsEnabled: !s.hapticsEnabled })),
       toggleSounds: () => set((s) => ({ soundsEnabled: !s.soundsEnabled })),
       toggleVoiceDictation: () => set((s) => ({ voiceDictationEnabled: !s.voiceDictationEnabled })),
       setLanguage: (lang) => set({ language: lang }),
+      setGoogleEmail: (email) => set({ googleEmail: email }),
+      setLastBackup: (at, fileId) => set({ lastBackupAt: at, lastBackupFileId: fileId }),
+      clearGoogleSession: () => set({ googleEmail: null }),
     }),
     {
       name: 'cozy-habits-settings',
@@ -74,6 +89,9 @@ export const useSettingsStore = create<SettingsState>()(
         soundsEnabled: state.soundsEnabled,
         voiceDictationEnabled: state.voiceDictationEnabled,
         language: state.language,
+        googleEmail: state.googleEmail,
+        lastBackupAt: state.lastBackupAt,
+        lastBackupFileId: state.lastBackupFileId,
       }),
     },
   ),

@@ -7,13 +7,18 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "androidStatusBar": {
+      "barStyle": "dark-content",
+      "translucent": true
+    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#fffbeb"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.facupich.cozyhabit"
     },
     "android": {
       "package": "com.facupich.cozyhabit",
@@ -27,7 +32,15 @@
     },
     "plugins": [
       "expo-font",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.536551592924-sn9roip13db3ulhat4k85skvuo9s29ei",
+          "webClientId": "536551592924-t3bihg007iv89vlb4025fmovepn592kd.apps.googleusercontent.com",
+          "androidClientId": "536551592924-sn9roip13db3ulhat4k85skvuo9s29ei.apps.googleusercontent.com"
+        }
+      ]
     ],
     "extra": {
       "eas": {

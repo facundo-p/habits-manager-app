@@ -33,6 +33,21 @@ export const styles = {
   importButtonText: button.secondaryText,
   destructiveNote: 'text-xs font-sans text-rose-400 mt-2 text-center',
 
+  /** Drive backup — Phase 3 */
+  driveSectionTitle: text.sectionTitle + ' mb-3 mt-2',
+  identityRow: 'flex-row items-center gap-2 py-3',
+  identityEmail: text.body + ' flex-1',
+  lastBackupCaption: text.caption + ' text-amber-600',
+  driveDescription: text.caption + ' mt-1',
+  connectButton: button.primary + ' flex-row gap-2 mt-2',
+  connectButtonText: button.primaryText,
+  backupNowButton: button.primary + ' flex-row gap-2 mt-3',
+  backupNowButtonText: button.primaryText,
+  restoreFromDriveButton: button.secondary + ' flex-row gap-2 mt-3',
+  restoreFromDriveButtonText: button.secondaryText,
+  signOutButton: 'flex-row items-center gap-2 py-3 mt-3 self-start',
+  signOutText: text.caption + ' text-amber-700',
+
   /** Separadores */
   divider: spacing.divider,
 

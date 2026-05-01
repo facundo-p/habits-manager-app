@@ -31,7 +31,7 @@ import {
   styles, miniProgressFillWidth, badgeContainerStyle, colors,
 } from './DailySheetScreen.styles';
 import type { DailyItem, DailyStats, HabitArea, FrequencyGroup, RootTabParamList } from '../types';
-import { parseJsonArray } from '../utils/parsing';
+import { parseAndValidateCategories } from '../utils/parsing';
 import { formatTodayDate, formatHistoricDate, isValidDateString } from '../utils/dateHelpers';
 
 type DailyNavProp = BottomTabNavigationProp<RootTabParamList, 'Hoy'>;
@@ -99,7 +99,7 @@ function AreaBadge({ areaId, onPress }: { areaId: string; onPress: (id: string) 
 }
 
 function AreaBadges({ categories, onBadgePress }: { categories: string; onBadgePress: (id: string) => void }) {
-  const ids = parseJsonArray(categories);
+  const ids = parseAndValidateCategories(categories);
   if (ids.length === 0) return null;
   return (
     <View className={styles.badgeRow}>
