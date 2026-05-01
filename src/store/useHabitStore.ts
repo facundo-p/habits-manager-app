@@ -20,6 +20,7 @@ import {
   removeSpontaneous,
   addAssignmentForHabit,
   removeAssignmentForHabit,
+  updateTodaySnapshotForHabit,
 } from '../services/assignmentService';
 import {
   getAllHabits,
@@ -227,6 +228,7 @@ export const useHabitStore = create<HabitState>((set, get) => ({
   editHabit: async (id, data) => {
     try {
       await updateHabit(id, data.name, data.frequency, data.basePoints, data.categories);
+      await updateTodaySnapshotForHabit(id);
       await refreshAll(set, get);
     } catch (err) { console.error('[editHabit]', err); }
   },
