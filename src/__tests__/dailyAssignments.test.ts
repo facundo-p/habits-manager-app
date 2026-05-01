@@ -42,6 +42,9 @@ import {
   checkAndBackfillHistory,
   addSpontaneous,
   nextDay,
+  getItemsForDate,
+  completeAssignment,
+  uncompleteAssignment,
 } from '../services/assignmentService';
 
 import { isFutureDate } from '../services/db';
@@ -416,5 +419,150 @@ describe('addSpontaneous — BUG-04: category validation', () => {
   test('BUG-04: succeeds with empty categories array', async () => {
     await expect(addSpontaneous('Logro', []))
       .resolves.toBeUndefined();
+  });
+});
+
+// ─── Visibility weekly/monthly (REQ-04-10/11, D-01 Opción B) ─────────────────
+
+describe('Visibility weekly/monthly — REQ-04-10/11', () => {
+  // Para 2026-03-11 (miércoles): semana ISO corre 2026-03-09 (lun) a 2026-03-15 (dom).
+  // Mes 2026-03 corre 2026-03-01 a 2026-03-31.
+  const MONDAY = '2026-03-09';
+  const SUNDAY = '2026-03-15';
+
+  function seedWeeklyRows(habitId: string, baseDate: string, days = 7): void {
+    for (let i = 0; i < days; i++) {
+      const d = new Date(`${baseDate}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + i);
+      const date = d.toISOString().slice(0, 10);
+      insertTestAssignment(db, {
+        id: `${habitId}-${date}`,
+        habit_id: habitId,
+        date,
+        snapshot_name: 'Yoga',
+        snapshot_points: 5,
+        snapshot_frequency: 'weekly',
+      });
+    }
+  }
+
+  test('REQ-04-10: weekly habit visible toda la semana — completar miércoles propaga a la semana', async () => {
+    insertTestHabit(db, { id: 'wh', name: 'Yoga', frequency: 'weekly', base_points: 5 });
+    seedWeeklyRows('wh', MONDAY);
+
+    // Estado inicial: ningún día visto como completado en período
+    const itemsMon = await getItemsForDate(MONDAY);
+    expect(itemsMon.find((i) => i.habitId === 'wh')?.isCompletedForPeriod).toBe(false);
+
+    // Completar el miércoles (TODAY)
+    const itemsWed = await getItemsForDate(TODAY);
+    const wedItem = itemsWed.find((i) => i.habitId === 'wh')!;
+    await completeAssignment(wedItem, TODAY);
+
+    // Volver a leer cada día — todos deben mostrar isCompletedForPeriod=true
+    const itemsMonAfter = await getItemsForDate(MONDAY);
+    const itemsSunAfter = await getItemsForDate(SUNDAY);
+    expect(itemsMonAfter.find((i) => i.habitId === 'wh')?.isCompletedForPeriod).toBe(true);
+    expect(itemsSunAfter.find((i) => i.habitId === 'wh')?.isCompletedForPeriod).toBe(true);
+
+    // is_completed (por-row) debe ser 1 para TODAS las rows (propagación física)
+    const completedRows = (db.prepare(
+      'SELECT COUNT(*) as c FROM daily_assignments WHERE habit_id = ? AND is_completed = 1',
+    ).get('wh') as { c: number }).c;
+    expect(completedRows).toBe(7);
+  });
+
+  test('REQ-04-10: uncomplete revierte la propagación', async () => {
+    insertTestHabit(db, { id: 'wh', name: 'Yoga', frequency: 'weekly' });
+    // Sembrar 7 rows ya completadas
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(`${MONDAY}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + i);
+      const date = d.toISOString().slice(0, 10);
+      insertTestAssignment(db, {
+        id: `wh-${date}`, habit_id: 'wh', date,
+        snapshot_frequency: 'weekly', is_completed: 1,
+      });
+    }
+
+    const items = await getItemsForDate(TODAY);
+    const item = items.find((i) => i.habitId === 'wh')!;
+    await uncompleteAssignment(item, TODAY);
+
+    const stillCompleted = (db.prepare(
+      'SELECT COUNT(*) as c FROM daily_assignments WHERE habit_id = ? AND is_completed = 1',
+    ).get('wh') as { c: number }).c;
+    expect(stillCompleted).toBe(0);
+  });
+
+  test('REQ-04-11: monthly habit visible todo el mes — completar día 11 propaga al mes', async () => {
+    insertTestHabit(db, { id: 'mh', name: 'Reflexión mensual', frequency: 'monthly' });
+    // Sembrar rows del 1 al 31 de marzo
+    for (let day = 1; day <= 31; day++) {
+      const date = `2026-03-${String(day).padStart(2, '0')}`;
+      insertTestAssignment(db, {
+        id: `mh-${date}`, habit_id: 'mh', date,
+        snapshot_frequency: 'monthly',
+      });
+    }
+
+    const items = await getItemsForDate(TODAY);
+    const item = items.find((i) => i.habitId === 'mh')!;
+    await completeAssignment(item, TODAY);
+
+    const itemsDay1 = await getItemsForDate('2026-03-01');
+    const itemsDay31 = await getItemsForDate('2026-03-31');
+    expect(itemsDay1.find((i) => i.habitId === 'mh')?.isCompletedForPeriod).toBe(true);
+    expect(itemsDay31.find((i) => i.habitId === 'mh')?.isCompletedForPeriod).toBe(true);
+
+    const completedRows = (db.prepare(
+      'SELECT COUNT(*) as c FROM daily_assignments WHERE habit_id = ? AND is_completed = 1',
+    ).get('mh') as { c: number }).c;
+    expect(completedRows).toBe(31);
+  });
+
+  test('REQ-04-10: daily habit NO se propaga (sólo afecta su día)', async () => {
+    insertTestHabit(db, { id: 'dh', name: 'Meditar', frequency: 'daily' });
+    insertTestAssignment(db, {
+      id: 'dh-today', habit_id: 'dh', date: TODAY, snapshot_frequency: 'daily',
+    });
+    insertTestAssignment(db, {
+      id: 'dh-yest', habit_id: 'dh', date: YESTERDAY, snapshot_frequency: 'daily',
+    });
+
+    const items = await getItemsForDate(TODAY);
+    const item = items.find((i) => i.habitId === 'dh')!;
+    await completeAssignment(item, TODAY);
+
+    // Sólo la row de today queda completada
+    const completedRows = (db.prepare(
+      'SELECT COUNT(*) as c FROM daily_assignments WHERE habit_id = ? AND is_completed = 1',
+    ).get('dh') as { c: number }).c;
+    expect(completedRows).toBe(1);
+
+    // isCompletedForPeriod del día = isCompleted (mismo período)
+    const itemsToday = await getItemsForDate(TODAY);
+    const todayItem = itemsToday.find((i) => i.habitId === 'dh')!;
+    expect(todayItem.isCompletedForPeriod).toBe(true);
+    expect(todayItem.isCompleted).toBe(true);
+
+    const itemsYest = await getItemsForDate(YESTERDAY);
+    const yest = itemsYest.find((i) => i.habitId === 'dh')!;
+    expect(yest.isCompletedForPeriod).toBe(false);
+  });
+});
+
+// ─── Dev invariant (REQ-04-01) ───────────────────────────────────────────────
+
+describe('ensureAssignmentsForDate — REQ-04-01 dev invariant', () => {
+  test('REQ-04-01: en operación normal, NO emite warn (no hay duplicados)', async () => {
+    insertTestHabit(db, { id: 'h1', name: 'Meditar' });
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    await ensureAssignmentsForDate(TODAY);
+    expect(warnSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining('[ensureAssignmentsForDate] duplicates detected'),
+      expect.anything(),
+    );
+    warnSpy.mockRestore();
   });
 });
