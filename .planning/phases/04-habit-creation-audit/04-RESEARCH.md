@@ -498,22 +498,22 @@ export async function ensureAssignmentsForDate(datePrefix: string): Promise<void
 | A4 | El flujo `editHabit → updateTodaySnapshotForHabit` agregado pre-sesión NO causa duplicados (solo UPDATE, no INSERT) | Duplication Root-Cause | Si en realidad `updateSnapshot` insertara cuando no encuentra row (no es el caso por inspección), introduciría una fuente nueva. Mitigación: revisión de la SQL constant ya hecha (`UPDATE daily_assignments SET ... WHERE habit_id = ? AND date = ? AND is_completed = 0` — confirma UPDATE puro). |
 | A5 | `rowid` es monotónicamente creciente en SQLite tal que dos inserts en el mismo segundo se ordenan por orden de inserción | Pattern 2 (CTE) | Si dos rows tienen idéntico rowid (imposible por defecto en SQLite — rowid es PK implícito), la heurística D-03 step 3 falla. Mitigación: imposible por design de SQLite. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **¿Opción A/B/C para weekly/monthly storage model?** (Pitfall #5)
    - What we know: D-01 dice "visibles todos los días, completion una vez por período".
    - What's unclear: ¿Una row por (habit, period) o una row por (habit, day) para weekly/monthly?
-   - Recommendation: **Opción B** — mantener una row por día (compatibilidad con schema actual y tests), pero `is_completed` se setea en TODAS las rows del período cuando el usuario completa una sola. Cambio menos invasivo. Plan stage debe confirmar.
+   - Recommendation: **RESOLVED:** **Opción B** — mantener una row por día (compatibilidad con schema actual y tests), pero `is_completed` se setea en TODAS las rows del período cuando el usuario completa una sola. Cambio menos invasivo. Plan stage debe confirmar.
 
 2. **¿La migración debe correr también en `restoreData`?** (Deferred §4 de CONTEXT)
    - What we know: Restore TRUNCATEa daily_assignments y reinserta del JSON.
    - What's unclear: Si el JSON viene pre-fix, ¿necesitamos re-correr la migration v1 después del bulk insert, o el pre-clean del array es suficiente?
-   - Recommendation: **Pre-clean es suficiente** — el array deduplicado preserva la heurística D-03; correr migration v1 después sería redundante. Pero el index ya creado (de la migración previa al restore) garantiza que un JSON con duplicados no puede entrar.
+   - Recommendation: **RESOLVED:** **Pre-clean es suficiente** — el array deduplicado preserva la heurística D-03; correr migration v1 después sería redundante. Pero el index ya creado (de la migración previa al restore) garantiza que un JSON con duplicados no puede entrar.
 
 3. **¿Soft-delete legacy spontáneos con `habit_id IS NULL` y categorias inválidas?**
    - What we know: BUG-04 ya impide crear con cats inválidas. `sanitizeCategories` ya limpia.
    - What's unclear: Si el index UNIQUE excluye `habit_id IS NULL`, ¿hay alguna otra restricción que se debería agregar para spontaneous? CONTEXT §Deferred dice "out of scope ahora" — confirmar.
-   - Recommendation: skip; out of scope.
+   - Recommendation: **RESOLVED:** skip; out of scope.
 
 ## Environment Availability
 
@@ -694,10 +694,10 @@ export async function ensureAssignmentsForDate(datePrefix: string): Promise<void
 | Migration design | HIGH | patterns SQLite estándar |
 | Visibility model | MEDIUM | recomendación Opción B requiere confirmación de plan stage |
 
-### Open Questions
-1. Storage model weekly/monthly (Opción A/B/C) — Recommendation: **Opción B** (row por día, completion propaga a todas las rows del período).
-2. ¿Migration v1 debe re-correr post-restore? — Recommendation: **No** — el pre-clean del array es suficiente porque el index ya creado garantiza la consistencia.
-3. Spontaneous post-fix dedup rules — Confirmar: out of scope per CONTEXT §Deferred.
+### Open Questions (RESOLVED)
+1. Storage model weekly/monthly (Opción A/B/C) — Recommendation: **RESOLVED:** **Opción B** (row por día, completion propaga a todas las rows del período).
+2. ¿Migration v1 debe re-correr post-restore? — Recommendation: **RESOLVED:** **No** — el pre-clean del array es suficiente porque el index ya creado garantiza la consistencia.
+3. Spontaneous post-fix dedup rules — Recommendation: **RESOLVED:** Confirmar: out of scope per CONTEXT §Deferred.
 
 ### Ready for Planning
 Research complete. Planner debe:

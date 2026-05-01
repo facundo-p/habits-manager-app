@@ -278,7 +278,7 @@ State is managed centrally via Zustand stores, which orchestrate service calls a
 - **Data Integrity:**
   - Foreign keys enabled in SQLite (`PRAGMA foreign_keys = ON`)
   - Cascading deletes on habit deletion
-  - Unique constraint on `(habit_id, date)` for daily_assignments (prevents duplicate assignments)
+  - **Partial UNIQUE INDEX** `idx_unique_habit_date` ON `daily_assignments(habit_id, date) WHERE habit_id IS NOT NULL` — introducido en Phase 4 (migration v1, `src/services/migrations/migrationV1.ts`). Previene duplicados de hábitos regulares; los spontaneous (habit_id IS NULL) están exentos por design (D-07). Ver `.planning/phases/04-habit-creation-audit/` para detalles de la migración versionada via `PRAGMA user_version`.
   - JSON parsing with fallback to `[]` if malformed
 
 **Authentication:**
