@@ -9,6 +9,7 @@ Este milestone parte de correctness: cuatro bugs en el sistema de daily assignme
 - [ ] **Phase 1: Bug Fixes** - Corregir los cuatro bugs de daily assignments que causan duplicación de datos y drift de timezone
 - [ ] **Phase 2: Tech Debt** - Limpiar tipos y centralizar parsing antes de agregar nueva complejidad
 - [ ] **Phase 3: Google Drive Backup** - Agregar backup/restore manual a Google Drive con autenticación OAuth
+- [ ] **Phase 4: Habit Creation Audit & Duplicate Cleanup** - Auditar todos los flujos de creación automática de hábitos diarios, corregir las fuentes de duplicación y limpiar la DB existente
 
 ## Phase Details
 
@@ -62,10 +63,21 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in order: 1 → 2 → 3
+Phases execute in order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Bug Fixes | 2/2 | Complete | - |
 | 2. Tech Debt | 3/3 | Complete | - |
 | 3. Google Drive Backup | 1/3 | In progress | - |
+| 4. Habit Creation Audit & Duplicate Cleanup | 0/0 | Not planned | - |
+
+### Phase 4: Habit Creation Audit & Duplicate Cleanup
+
+**Goal:** Auditar exhaustivamente todos los flujos de creación automática de daily assignments — rollover diario, inicio de semana, inicio de mes, creación manual de hábito en biblioteca, restauración de backups — identificar dónde se generan duplicados, corregir el código en cada flujo y diseñar una migración de DB que limpie los duplicados ya persistidos en bases existentes para dejarlas consistentes.
+**Requirements**: TBD (a definir en /gsd-discuss-phase 4)
+**Depends on:** Phase 3
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 4 to break down)

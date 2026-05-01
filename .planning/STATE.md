@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: verifying
 stopped_at: Completed 03-03-PLAN.md (Phase 03 ready for verification)
-last_updated: "2026-04-28T03:29:41.183Z"
-last_activity: 2026-04-28
+last_updated: "2026-04-30T11:30:00.000Z"
+last_activity: 2026-04-30
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
   total_plans: 8
   completed_plans: 8
-  percent: 100
+  percent: 75
 ---
 
 # Project State
@@ -75,6 +75,10 @@ Recent decisions affecting current work:
 - [Phase 03]: Plan 03-02: dateFormat.ts y driveRetention.ts como funciones puras compartidas — sin duplicación entre screens (CLAUDE.md Regla 3)
 - [Phase 03]: Plan 03-03: API split prepareRestore/applyRestore (single download, cleanup estrictamente post-success de restoreData) en lugar de restoreFromBackup monolítica — evita doble download al confirmar y deja cache previo intacto si restoreData throws (warning #9)
 - [Phase 03]: Plan 03-03: writePreRestoreCache best-effort (D-19) — si FS falla, log warn y continuar; el cache es red de seguridad opcional, no bloqueante
+
+### Roadmap Evolution
+
+- 2026-04-30: Phase 4 added — Habit Creation Audit & Duplicate Cleanup. Trabajo post-milestone v1.0 (que estaba en `verifying`) para auditar todos los flujos de creación automática de daily assignments, corregir duplicaciones y migrar la DB existente. Working branch: `fix/habit-creation-audit`.
 
 ### Pending Todos
 
