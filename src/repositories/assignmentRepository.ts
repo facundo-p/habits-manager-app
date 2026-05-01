@@ -48,6 +48,76 @@ const SQL_DELETE_UNCOMPLETED_BY_HABIT_AND_DATE =
 const SQL_UPDATE_SNAPSHOT =
   'UPDATE daily_assignments SET snapshot_name = ?, snapshot_points = ?, snapshot_categories = ?, snapshot_frequency = ? WHERE habit_id = ? AND date = ? AND is_completed = 0';
 
+// ─── SQL Constants para dedup migration (REQ-04-04..09) ─────────────
+
+/**
+ * SQL_DEDUPE_VIA_CTE — single-statement DELETE que aplica D-03 priority.
+ *
+ * Heurística (RESEARCH §Pattern 2):
+ *   1. is_completed DESC  (1 wins)
+ *   2. has performed_habit linked DESC (1 wins)
+ *   3. da.rowid ASC       (más antigua wins — rowid es monotónico)
+ *
+ * Usa ROW_NUMBER() OVER (PARTITION BY habit_id, date ORDER BY ...) para
+ * etiquetar la fila ganadora con rn=1; borra las rn>1.
+ *
+ * Sólo aplica a habit_id IS NOT NULL (spontaneous se preservan, D-07).
+ */
+export const SQL_DEDUPE_VIA_CTE = `
+DELETE FROM daily_assignments
+WHERE id IN (
+  SELECT id FROM (
+    SELECT
+      da.id,
+      ROW_NUMBER() OVER (
+        PARTITION BY da.habit_id, da.date
+        ORDER BY
+          da.is_completed DESC,
+          (CASE WHEN EXISTS (
+            SELECT 1 FROM performed_habits ph
+            WHERE ph.habit_id = da.habit_id
+              AND substr(ph.timestamp, 1, 10) = da.date
+          ) THEN 1 ELSE 0 END) DESC,
+          da.rowid ASC
+      ) AS rn
+    FROM daily_assignments da
+    WHERE da.habit_id IS NOT NULL
+  )
+  WHERE rn > 1
+)
+`;
+
+/** Encuentra grupos (habit_id, date) con count > 1 — SOLO regulares. */
+export const SQL_FIND_DUPLICATES = `
+  SELECT habit_id, date, COUNT(*) as count
+  FROM daily_assignments
+  WHERE habit_id IS NOT NULL
+  GROUP BY habit_id, date
+  HAVING COUNT(*) > 1
+`;
+
+/**
+ * Invariante post-DELETE: cuenta cuántos grupos siguen duplicados.
+ * Si > 0, la migración debe abortar (RESEARCH §Pitfall #1).
+ */
+export const SQL_ASSERT_NO_DUPLICATES = `
+  SELECT COUNT(*) as count FROM (
+    SELECT 1 FROM daily_assignments
+    WHERE habit_id IS NOT NULL
+    GROUP BY habit_id, date HAVING COUNT(*) > 1
+  )
+`;
+
+/** Partial UNIQUE INDEX (D-07). IF NOT EXISTS para idempotencia. */
+export const SQL_CREATE_UNIQUE_INDEX = `
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_habit_date
+  ON daily_assignments(habit_id, date)
+  WHERE habit_id IS NOT NULL
+`;
+
+const SQL_COUNT_BY_HABIT_AND_DATE =
+  'SELECT COUNT(*) as count FROM daily_assignments WHERE habit_id = ? AND date = ?';
+
 // ─── Consultas ──────────────────────────────────────────────────────
 
 /** Todas las asignaciones para una fecha (YYYY-MM-DD). */
@@ -108,6 +178,25 @@ export async function findByHabitAndDate(
 ): Promise<DailyAssignment | null> {
   const db = await getDatabase();
   return db.getFirstAsync<DailyAssignment>(SQL_FIND_BY_HABIT_AND_DATE, [habitId, datePrefix]);
+}
+
+/** Cuenta rows para un (habit_id, date). Útil para invariantes runtime (REQ-04-02). */
+export async function countByHabitAndDate(
+  habitId: string,
+  datePrefix: string,
+): Promise<number> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ count: number }>(
+    SQL_COUNT_BY_HABIT_AND_DATE,
+    [habitId, datePrefix],
+  );
+  return row?.count ?? 0;
+}
+
+/** Lista grupos duplicados (habit_id, date, count). Util para invariantes y tests. */
+export async function findDuplicates(): Promise<{ habit_id: string; date: string; count: number }[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<{ habit_id: string; date: string; count: number }>(SQL_FIND_DUPLICATES);
 }
 
 // ─── Mutaciones ─────────────────────────────────────────────────────
