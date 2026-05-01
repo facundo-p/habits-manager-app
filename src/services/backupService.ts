@@ -17,6 +17,7 @@ import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { BACKUP_VERSION, BACKUP_FILENAME } from '../config/constants';
 import * as backupRepo from '../repositories/backupRepository';
+import { dedupeAssignmentsArray } from '../utils/dedupeAssignmentsArray';
 import type { BackupData, Habit, PerformedHabit, MoodEntry, DailyAssignment } from '../types';
 
 // ─── Exportar ────────────────────────────────────────────────────────
@@ -123,11 +124,25 @@ export function parseAndValidate(json: string): BackupData {
   };
 }
 
+/**
+ * Restaura un backup completo. Aplica pre-clean a daily_assignments via
+ * dedupeAssignmentsArray (REQ-04-03) para que un backup pre-Phase-4 con
+ * duplicados no rompa el partial UNIQUE INDEX (idx_unique_habit_date).
+ *
+ * Heurística D-03 aplicada en memoria; spontaneous (habit_id=null) se preservan.
+ *
+ * driveBackupService.applyRestore consume esta función — el pre-clean se
+ * aplica transparentemente al restore desde Drive también.
+ */
 export async function restoreData(data: BackupData): Promise<void> {
+  const dedupedAssignments = dedupeAssignmentsArray(
+    data.daily_assignments,
+    data.performed_habits,
+  );
   await backupRepo.restoreAllData(
     data.habits,
     data.performed_habits,
     data.mood_entries,
-    data.daily_assignments,
+    dedupedAssignments,
   );
 }
