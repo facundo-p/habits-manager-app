@@ -239,17 +239,23 @@ function enrichAssignments(
 ): DailyItem[] {
   const performedMap = new Map(performed.map((p) => [p.habit_id, p.id]));
 
-  return assignments.map((a) => ({
-    assignmentId: a.id,
-    habitId: a.habit_id,
-    name: a.snapshot_name,
-    points: a.snapshot_points,
-    categories: a.snapshot_categories,
-    frequency: a.snapshot_frequency as 'daily' | 'weekly' | 'monthly',
-    isCompleted: a.is_completed === 1,
-    isSpontaneous: a.is_spontaneous === 1,
-    performedHabitId: a.habit_id ? performedMap.get(a.habit_id) ?? null : null,
-  }));
+  return assignments.map((a) => {
+    const isCompleted = a.is_completed === 1;
+    return {
+      assignmentId: a.id,
+      habitId: a.habit_id,
+      name: a.snapshot_name,
+      points: a.snapshot_points,
+      categories: a.snapshot_categories,
+      frequency: a.snapshot_frequency as 'daily' | 'weekly' | 'monthly',
+      isCompleted,
+      // Hotfix Task 1: placeholder = isCompleted; el cómputo real (period-aware)
+      // lo agrega Task 2 mediante getItemsForDate -> findCompletedHabitsInRange.
+      isCompletedForPeriod: isCompleted,
+      isSpontaneous: a.is_spontaneous === 1,
+      performedHabitId: a.habit_id ? performedMap.get(a.habit_id) ?? null : null,
+    };
+  });
 }
 
 export function nextDay(dateStr: string): string {

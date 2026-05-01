@@ -118,6 +118,27 @@ export const SQL_CREATE_UNIQUE_INDEX = `
 const SQL_COUNT_BY_HABIT_AND_DATE =
   'SELECT COUNT(*) as count FROM daily_assignments WHERE habit_id = ? AND date = ?';
 
+// ─── SQL Constants para visibility de período (REQ-04-10/11) ────────
+
+const SQL_SET_COMPLETED_FOR_HABIT_IN_RANGE = `
+  UPDATE daily_assignments
+  SET is_completed = ?
+  WHERE habit_id = ?
+    AND date BETWEEN ? AND ?
+`;
+
+const SQL_UPDATE_SNAPSHOT_FOR_HABIT_IN_RANGE = `
+  UPDATE daily_assignments
+  SET snapshot_name = ?, snapshot_points = ?, snapshot_categories = ?, snapshot_frequency = ?
+  WHERE habit_id = ?
+    AND date BETWEEN ? AND ?
+    AND is_completed = 0
+`;
+
+// SQL_FIND_COMPLETED_HABITS_IN_RANGE NO se define como const aquí porque
+// el placeholder list es dinámico (?, ?, ?... según largo de habitIds).
+// Se construye dentro de la wrapper.
+
 // ─── Consultas ──────────────────────────────────────────────────────
 
 /** Todas las asignaciones para una fecha (YYYY-MM-DD). */
@@ -199,6 +220,35 @@ export async function findDuplicates(): Promise<{ habit_id: string; date: string
   return db.getAllAsync<{ habit_id: string; date: string; count: number }>(SQL_FIND_DUPLICATES);
 }
 
+/**
+ * REQ-04-10/11: para una lista de habit_ids y un rango de fechas, retorna los
+ * habit_ids que tienen AL MENOS UNA row con is_completed=1 en el rango.
+ * Single aggregated query — evita N+1 (RESEARCH §Pattern 3, Risk R3).
+ *
+ * Si habitIds está vacío, retorna [] sin tocar la DB.
+ */
+export async function findCompletedHabitsInRange(
+  habitIds: string[],
+  startDate: string,
+  endDate: string,
+): Promise<string[]> {
+  if (habitIds.length === 0) return [];
+  const db = await getDatabase();
+  const placeholders = habitIds.map(() => '?').join(',');
+  const sql = `
+    SELECT DISTINCT habit_id
+    FROM daily_assignments
+    WHERE habit_id IN (${placeholders})
+      AND date BETWEEN ? AND ?
+      AND is_completed = 1
+  `;
+  const rows = await db.getAllAsync<{ habit_id: string }>(
+    sql,
+    [...habitIds, startDate, endDate],
+  );
+  return rows.map((r) => r.habit_id);
+}
+
 // ─── Mutaciones ─────────────────────────────────────────────────────
 
 /** Inserta una nueva asignación. Retorna el ID generado. */
@@ -256,4 +306,41 @@ export async function deleteUncompletedByHabitAndDate(
 ): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(SQL_DELETE_UNCOMPLETED_BY_HABIT_AND_DATE, [habitId, datePrefix]);
+}
+
+/**
+ * REQ-04-10/11: marca/desmarca is_completed para todas las rows
+ * (habit_id, date BETWEEN start AND end). Soporta propagación de completion
+ * a las rows del período actual de hábitos weekly/monthly.
+ */
+export async function setCompletedForHabitInRange(
+  habitId: string,
+  completed: number,
+  startDate: string,
+  endDate: string,
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(SQL_SET_COMPLETED_FOR_HABIT_IN_RANGE, [
+    completed, habitId, startDate, endDate,
+  ]);
+}
+
+/**
+ * REQ-04-10/11: aplica snapshot a rows uncompleted en (habit_id, date BETWEEN ...).
+ * Preserva snapshots de rows ya completadas (consistencia con updateSnapshot existente).
+ */
+export async function updateSnapshotForHabitInRange(
+  habitId: string,
+  startDate: string,
+  endDate: string,
+  snapshotName: string,
+  snapshotPoints: number,
+  snapshotCategories: string,
+  snapshotFrequency: string,
+): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(SQL_UPDATE_SNAPSHOT_FOR_HABIT_IN_RANGE, [
+    snapshotName, snapshotPoints, snapshotCategories, snapshotFrequency,
+    habitId, startDate, endDate,
+  ]);
 }
