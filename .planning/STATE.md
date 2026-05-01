@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-05-01T04:55:17.775Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-05-01T05:09:14.022Z"
 last_activity: 2026-05-01
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 12
-  completed_plans: 10
-  percent: 83
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 04 (habit-creation-audit) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-05-01
 
@@ -58,6 +58,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 03 P03 | 6 min | 2 tasks | 3 files |
 | Phase 04 P01 | 12 min | 4 tasks | 6 files |
 | Phase 04 P02 | 10 min | 3 tasks | 5 files |
+| Phase 04 P03 | 25min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Plan 03-03: writePreRestoreCache best-effort (D-19) — si FS falla, log warn y continuar; el cache es red de seguridad opcional, no bloqueante
 - [Phase 04]: Plan 04-01: Helpers puros (periodHelpers, dedupeAssignmentsArray) + pre-migration test fixture + withTransactionAsync mock — sin cambios de prod, desbloquea planes 02-04
 - [Phase 04]: Plan 04-02: PRAGMA user_version como nuevo mecanismo de versioned migrations (built-in atómico). Migration v1 = dedupe D-03 + partial UNIQUE INDEX en transacción atómica con silent failure D-06. assertNoDuplicatesRemain como invariante post-DELETE (Pitfall #1).
+- [Phase 04]: D-01 Open Q1 cerrada: Opcion B confirmada (una row/dia + propagacion via UPDATE BETWEEN; isCompletedForPeriod computado read-time)
+- [Phase 04]: DailyItem.isCompletedForPeriod es REQUERIDO (no opcional) para forzar wiring explicito en consumers
+- [Phase 04]: getPointsForDate sin cambios: weekly de 5pts contribuye 5x7=35pts a totales semanales (decision diferida hasta senal de usuario)
 
 ### Roadmap Evolution
 
@@ -95,6 +99,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-01T04:55:17.770Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-05-01T05:09:05.798Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None

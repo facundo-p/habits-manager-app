@@ -82,5 +82,5 @@ Phases execute in order: 1 → 2 → 3 → 4
 Plans:
 - [x] 04-01-PLAN.md — periodHelpers (REQ-04-12) + dedupeAssignmentsArray (REQ-04-03 utility) + Wave 0 test infrastructure (createPreMigrationTestDatabase, seedDuplicates, insertTestPerformed)
 - [x] 04-02-PLAN.md — Migration v1 versionada via PRAGMA user_version: dedupe via CTE+ROW_NUMBER (REQ-04-04) + partial UNIQUE INDEX (REQ-04-05/08/09) + atomicity/idempotency/silent failure (REQ-04-06/07) + integración en initDatabase y verificación de boot order
-- [ ] 04-03-PLAN.md — Visibility-aware reads (REQ-04-10/11): DailyItem.isCompletedForPeriod via single aggregated query + completion propagation a período (D-01 Opción B) + dev invariant warn (REQ-04-01) + idempotency confirmation (REQ-04-02)
+- [x] 04-03-PLAN.md — Visibility-aware reads (REQ-04-10/11): DailyItem.isCompletedForPeriod via single aggregated query + completion propagation a período (D-01 Opción B) + dev invariant warn (REQ-04-01) + idempotency confirmation (REQ-04-02)
 - [ ] 04-04-PLAN.md — Restore pre-clean en backupService (REQ-04-03 integration) + ARCHITECTURE.md doc-fix (Regla 3.4 CLAUDE.md) + 04-VALIDATION.md per-task map filled (nyquist_compliant: true)
