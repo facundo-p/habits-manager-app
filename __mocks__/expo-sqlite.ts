@@ -45,6 +45,27 @@ class MockSQLiteDatabase {
     const stmt = getDb().prepare(sql);
     return stmt.all(...params) as T[];
   }
+
+  /**
+   * Shim de withTransactionAsync — emula el contrato de expo-sqlite real:
+   *  - BEGIN antes del callback
+   *  - COMMIT si el callback resuelve
+   *  - ROLLBACK + re-throw si el callback rechaza
+   *
+   * Usa exec() síncrono de better-sqlite3 (envuelto en async wrapper).
+   * No soporta transacciones anidadas (la app real tampoco lo hace).
+   */
+  async withTransactionAsync(fn: () => Promise<void>): Promise<void> {
+    const db = getDb();
+    db.exec('BEGIN');
+    try {
+      await fn();
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+  }
 }
 
 const _sharedInstance = new MockSQLiteDatabase();
