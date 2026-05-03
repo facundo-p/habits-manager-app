@@ -72,7 +72,7 @@ export function useSpeechRecognition(onPartialResult: (text: string) => void) {
     } catch {
       setIsListening(false);
     }
-  }, []);
+  }, [locale]);
 
   const stop = useCallback(async () => {
     try {
