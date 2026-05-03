@@ -35,8 +35,8 @@ export async function getItemsForDate(
     taskRepo.findByDate(day),
   ]);
 
-  // REQ-04-10/11: resolver isCompletedForPeriod via single aggregated query
-  // por frequency (weekly/monthly) — daily no necesita query (ya viene en is_completed).
+  // Resolver isCompletedForPeriod via aggregated query por frequency
+  // (weekly/monthly) — daily no necesita query adicional.
   const completedInPeriod = await resolveCompletedInPeriod(assignments, day);
   return enrichAssignments(assignments, performed, completedInPeriod);
 }
@@ -104,7 +104,7 @@ export async function completeAssignment(
 ): Promise<string | null> {
   const day = datePrefix ?? getTodayPrefix();
 
-  // REQ-04-10/11 D-01 Opción B: weekly/monthly propagan completion al período.
+  // weekly/monthly propagan completion a todas las rows del período.
   if (item.habitId !== null && (item.frequency === 'weekly' || item.frequency === 'monthly')) {
     const [start, end] = getPeriodRange(day, item.frequency);
     await assignmentRepo.setCompletedForHabitInRange(item.habitId, 1, start, end);
@@ -131,7 +131,7 @@ export async function uncompleteAssignment(
 ): Promise<void> {
   const day = datePrefix ?? getTodayPrefix();
 
-  // REQ-04-10/11: revertir propagación si el hábito es weekly/monthly.
+  // revertir propagación si el hábito es weekly/monthly.
   if (item.habitId !== null && (item.frequency === 'weekly' || item.frequency === 'monthly')) {
     const [start, end] = getPeriodRange(day, item.frequency);
     await assignmentRepo.setCompletedForHabitInRange(item.habitId, 0, start, end);
@@ -151,7 +151,6 @@ export async function addSpontaneous(
   categories: string[],
   datePrefix?: string,
 ): Promise<void> {
-  // BUG-04: validar categorias antes de insertar
   const invalidIds = categories.filter((id) => !VALID_AREA_IDS.has(id));
   if (invalidIds.length > 0) {
     throw new Error(
@@ -222,8 +221,8 @@ export async function updateTodaySnapshotForHabit(habitId: string): Promise<void
   if (!habit) return;
 
   const freq = habit.frequency as Frequency;
-  // REQ-04-10/11 D-01: weekly/monthly propagan snapshot a todas las rows
-  // uncompleted del período actual; daily mantiene comportamiento por-día.
+  // weekly/monthly propagan snapshot a todas las rows uncompleted del período;
+  // daily actualiza solo la row de hoy.
   if (freq === 'weekly' || freq === 'monthly') {
     const [start, end] = getPeriodRange(today, freq);
     await assignmentRepo.updateSnapshotForHabitInRange(
@@ -305,12 +304,11 @@ async function insertAssignmentForHabit(
 }
 
 /**
- * REQ-04-01: invariante runtime dev-only — el INDEX en prod ya hace fail-loud,
- * pero en dev queremos detectar regresiones en tests sin index en otros paths.
+ * Invariante runtime dev-only — el UNIQUE INDEX en prod hace fail-loud, pero en
+ * dev queremos detectar regresiones en tests donde el index puede no estar activo.
  *
  * Lectura defensiva: `__DEV__` es global en Metro/RN. En jest no se inyecta,
- * así que default = true (en jest queremos que el invariante CORRA — es donde
- * más útil es para detectar regresiones tempranas).
+ * así que default = true para que el invariante corra en tests también.
  */
 async function assertNoDuplicatesIfDev(): Promise<void> {
   const __DEV__ = (globalThis as { __DEV__?: boolean }).__DEV__ ?? true;
@@ -333,9 +331,9 @@ function enrichAssignments(
 
   return assignments.map((a) => {
     const isCompleted = a.is_completed === 1;
-    // REQ-04-10/11: para hábitos regulares periódicos, isCompletedForPeriod
-    // refleja si CUALQUIER row del período tiene is_completed=1. Para spontaneous
-    // (habit_id=null) y daily, equivale al estado de la propia row.
+    // Para hábitos periódicos (weekly/monthly), isCompletedForPeriod refleja si
+    // CUALQUIER row del período tiene is_completed=1. Para spontaneous y daily,
+    // equivale al estado de la propia row.
     const isCompletedForPeriod = a.habit_id !== null
       ? (isCompleted || completedInPeriod.has(a.habit_id))
       : isCompleted;
