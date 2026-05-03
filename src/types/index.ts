@@ -50,12 +50,6 @@ export interface DailyAssignment {
 
 // ─── Vistas enriquecidas ────────────────────────────────────────────
 
-/** Habit enriquecido con estado de completado para la vista diaria (legacy) */
-export interface DailyHabit extends Habit {
-  completedToday: boolean;
-  performedHabitId: string | null;
-}
-
 /** Ítem enriquecido del día basado en daily_assignments */
 export interface DailyItem {
   assignmentId: string;

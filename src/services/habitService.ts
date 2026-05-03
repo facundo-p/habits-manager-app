@@ -8,38 +8,12 @@
  * Las firmas públicas NO cambian (contrato con el Store).
  */
 
-import { getTodayPrefix, getNowTimestamp, getTimestampForDate } from './db';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
-import type { Habit, DailyHabit, DailyStats } from '../types';
-import { buildStats } from '../utils/statsHelpers';
+import type { Habit } from '../types';
 import { VALID_AREA_IDS } from '../config/constants';
 
 // ─── Consultas ──────────────────────────────────────────────────────
-
-/** Hábitos activos con estado de completado para una fecha (default: hoy). */
-export async function getHabitsForDay(
-  datePrefix?: string,
-): Promise<DailyHabit[]> {
-  const day = datePrefix ?? getTodayPrefix();
-  const [habits, performed] = await Promise.all([
-    habitRepo.findAllActive(),
-    taskRepo.findByDate(day),
-  ]);
-  return enrichWithPerformed(habits, performed);
-}
-
-/** Progreso de puntos para hábitos de frecuencia daily (para header global). */
-export async function getDailyPointsProgress(
-  datePrefix?: string,
-): Promise<DailyStats> {
-  const day = datePrefix ?? getTodayPrefix();
-  const [total, earned] = await Promise.all([
-    habitRepo.sumPointsByFrequency('daily'),
-    taskRepo.sumEarnedForDate(day),
-  ]);
-  return buildStats(earned, total);
-}
 
 /** Todos los hábitos (incluyendo inactivos) para la Biblioteca. */
 export async function getAllHabits(): Promise<Habit[]> {
@@ -61,20 +35,6 @@ export async function getCompletionCounts(): Promise<Record<string, number>> {
 }
 
 // ─── Mutaciones ─────────────────────────────────────────────────────
-
-/** Marca un hábito como hecho. Acepta datePrefix para modo histórico. */
-export async function markHabitDone(
-  habit: DailyHabit,
-  datePrefix?: string,
-): Promise<string> {
-  const ts = datePrefix ? getTimestampForDate(datePrefix) : getNowTimestamp();
-  return taskRepo.insert(habit.id, ts, habit.base_points, habit.default_categories);
-}
-
-/** Desmarca un hábito (borra el registro performed_habit). */
-export async function unmarkHabit(performedHabitId: string): Promise<void> {
-  return taskRepo.deleteById(performedHabitId);
-}
 
 /** Actualiza la descripción/reflexión de un performed_habit. */
 export async function updatePerformedDescription(
@@ -128,18 +88,3 @@ export async function updateHabit(
 export async function deleteHabit(habitId: string): Promise<void> {
   return habitRepo.deleteById(habitId);
 }
-
-// ─── Helpers internos (lógica de negocio) ────────────────────────────
-
-function enrichWithPerformed(
-  habits: Habit[],
-  performed: { id: string; habit_id: string }[],
-): DailyHabit[] {
-  const map = new Map(performed.map((p) => [p.habit_id, p.id]));
-  return habits.map((h) => ({
-    ...h,
-    completedToday: map.has(h.id),
-    performedHabitId: map.get(h.id) ?? null,
-  }));
-}
-
