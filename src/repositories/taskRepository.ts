@@ -14,11 +14,6 @@ export interface PerformedRow {
   habit_id: string;
 }
 
-export interface EarnedByDayRow {
-  day: string;
-  earned: number;
-}
-
 export interface CategoryDataRow {
   categories_used: string;
   points_earned: number;
@@ -37,17 +32,11 @@ const SQL_BY_DATE =
 const SQL_EARNED_FOR_DATE =
   "SELECT COALESCE(SUM(points_earned), 0) as earned FROM performed_habits WHERE timestamp LIKE ? || '%'";
 
-const SQL_EARNED_BY_DAY_IN_MONTH =
-  "SELECT SUBSTR(timestamp, 9, 2) as day, SUM(points_earned) as earned FROM performed_habits WHERE timestamp LIKE ? || '%' GROUP BY day";
-
 const SQL_CATEGORIES_IN_MONTH =
   "SELECT categories_used, points_earned FROM performed_habits WHERE timestamp LIKE ? || '%' AND categories_used IS NOT NULL";
 
 const SQL_SUM_IN_RANGE =
   'SELECT COALESCE(SUM(points_earned), 0) as total FROM performed_habits WHERE timestamp >= ? AND timestamp < ?';
-
-const SQL_HABIT_IDS_ON_DATE =
-  "SELECT habit_id FROM performed_habits WHERE timestamp LIKE ? || '%'";
 
 const SQL_COMPLETION_COUNTS =
   'SELECT habit_id, COUNT(*) as count FROM performed_habits GROUP BY habit_id';
@@ -78,12 +67,6 @@ export async function sumEarnedForDate(datePrefix: string): Promise<number> {
   return row?.earned ?? 0;
 }
 
-/** Puntos ganados agrupados por día dentro de un mes (prefix YYYY-MM). */
-export async function sumEarnedByDayInMonth(monthPrefix: string): Promise<EarnedByDayRow[]> {
-  const db = await getDatabase();
-  return db.getAllAsync<EarnedByDayRow>(SQL_EARNED_BY_DAY_IN_MONTH, [monthPrefix]);
-}
-
 /** Categorías y puntos para registros dentro de un mes. */
 export async function findCategoriesInMonth(monthPrefix: string): Promise<CategoryDataRow[]> {
   const db = await getDatabase();
@@ -95,13 +78,6 @@ export async function sumEarnedInRange(start: string, end: string): Promise<numb
   const db = await getDatabase();
   const row = await db.getFirstAsync<{ total: number }>(SQL_SUM_IN_RANGE, [start, end]);
   return row?.total ?? 0;
-}
-
-/** IDs de hábitos completados en una fecha. */
-export async function findHabitIdsOnDate(datePrefix: string): Promise<string[]> {
-  const db = await getDatabase();
-  const rows = await db.getAllAsync<{ habit_id: string }>(SQL_HABIT_IDS_ON_DATE, [datePrefix]);
-  return rows.map((r) => r.habit_id);
 }
 
 /** Conteo de completados agrupados por habit_id. */
