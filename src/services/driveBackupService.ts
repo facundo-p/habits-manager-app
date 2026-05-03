@@ -69,6 +69,11 @@ export interface UploadResult {
 const DRIVE_BASE = 'https://www.googleapis.com/drive/v3';
 const UPLOAD_BASE = 'https://www.googleapis.com/upload/drive/v3';
 
+// Todo input usado en query Drive DEBE pasar por driveEscape.
+function driveEscape(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
 // ─── Auth ────────────────────────────────────────────────────────────
 
 /**
@@ -140,7 +145,7 @@ async function getDriveAccessToken(): Promise<string> {
 /** Lista todos los backups en appDataFolder ordenados por más reciente primero. */
 export async function listBackups(): Promise<DriveBackupFile[]> {
   const token = await getDriveAccessToken();
-  const q = `name contains '${BACKUP_FILE_PREFIX}' and name contains '${BACKUP_FILE_EXTENSION}' and trashed=false`;
+  const q = `name contains '${driveEscape(BACKUP_FILE_PREFIX)}' and name contains '${driveEscape(BACKUP_FILE_EXTENSION)}' and trashed=false`;
   const params = new URLSearchParams({
     spaces: 'appDataFolder',
     q,
@@ -155,7 +160,7 @@ export async function listBackups(): Promise<DriveBackupFile[]> {
 }
 
 async function findFileByName(name: string, token: string): Promise<DriveBackupFile | null> {
-  const q = `name='${name}' and trashed=false`;
+  const q = `name='${driveEscape(name)}' and trashed=false`;
   const params = new URLSearchParams({
     spaces: 'appDataFolder',
     q,
