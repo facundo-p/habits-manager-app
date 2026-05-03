@@ -9,6 +9,7 @@
  */
 
 import { parseAndValidateCategories } from '../utils/parsing';
+import { dateToPrefix } from '../utils/dateHelpers';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
 import * as assignmentRepo from '../repositories/assignmentRepository';
@@ -19,10 +20,6 @@ import type { DaySummaryHabit, CategoryPoints, WeeklyComparison } from '../types
 
 function buildMonthPrefix(month: number, year: number): string {
   return `${year}-${String(month).padStart(2, '0')}`;
-}
-
-function formatDateOnly(date: Date): string {
-  return date.toISOString().slice(0, 10);
 }
 
 function getWeekBounds(weeksAgo: number): { start: string; end: string } {
@@ -37,7 +34,7 @@ function getWeekBounds(weeksAgo: number): { start: string; end: string } {
   const nextMonday = new Date(monday);
   nextMonday.setDate(monday.getDate() + 7);
 
-  return { start: formatDateOnly(monday), end: formatDateOnly(nextMonday) };
+  return { start: dateToPrefix(monday), end: dateToPrefix(nextMonday) };
 }
 
 

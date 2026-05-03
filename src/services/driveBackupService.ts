@@ -28,6 +28,7 @@ import {
   ALERT_DRIVE_GENERIC,
 } from '../config/constants';
 import { buildBackupData, parseAndValidate, restoreData } from './backupService';
+import { getTodayPrefix } from './db';
 import type { BackupData } from '../types';
 import { selectFilesToPrune } from '../utils/driveRetention';
 
@@ -184,7 +185,7 @@ export async function uploadBackup(): Promise<UploadResult> {
   const data = await buildBackupData();
   const json = JSON.stringify(data);
   const token = await getDriveAccessToken();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayPrefix();
   const filename = `${BACKUP_FILE_PREFIX}${today}${BACKUP_FILE_EXTENSION}`;
 
   const existing = await findFileByName(filename, token);

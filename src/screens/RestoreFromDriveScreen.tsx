@@ -10,7 +10,7 @@
  * restore confirmation destructivo, error state con reintentar, refresh de
  * stores post-restore. Ver UI-SPEC §3.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { FileText, ChevronRight, CloudOff, WifiOff } from 'lucide-react-native';
@@ -19,6 +19,8 @@ import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import * as drive from '../services/driveBackupService';
 import { useHabitStore } from '../store/useHabitStore';
 import { formatDateEs, formatSize } from '../utils/dateFormat';
+import { getTodayPrefix } from '../services/db';
+import { useIsMounted } from '../hooks/useIsMounted';
 import {
   ALERT_DRIVE_RESTORE_CONFIRM,
   ALERT_DRIVE_RESTORE_SUCCESS,
@@ -95,8 +97,7 @@ export function RestoreFromDriveScreen() {
   const [isPreparing, setIsPreparing] = useState(false);
 
   // WR-03: guard contra setState después de unmount (back-press durante async work)
-  const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  const mountedRef = useIsMounted();
 
   const loadList = useCallback(async () => {
     setStatus('loading');
@@ -123,7 +124,7 @@ export function RestoreFromDriveScreen() {
     setOverlayMsg(RESTORE_SCREEN_OVERLAY_RESTORING);
     try {
       await drive.applyRestore(payload);
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getTodayPrefix();
       await Promise.all([fetchHabitsForDate(today), fetchLibrary()]);
       if (!mountedRef.current) return; // WR-03
       const fechaLabel = formatDateEs(new Date(payload.exportedAt));
