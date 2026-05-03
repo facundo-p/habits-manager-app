@@ -71,7 +71,7 @@ export function StatsScreen() {
   const handleEditDay = useCallback(() => {
     if (selectedDay === null) return;
     const dateStr = buildDateStr(year, month, selectedDay);
-    navigation.navigate(ROUTES.DAILY_SHEET as 'Hoy', { date: dateStr });
+    navigation.navigate(ROUTES.DAILY_SHEET, { date: dateStr });
   }, [selectedDay, month, year, navigation]);
 
   const goToPrev = useCallback(() => {

@@ -63,7 +63,7 @@ function MainTabs() {
       }}
     >
       <Tab.Screen
-        name={ROUTES.DAILY_SHEET as 'Hoy'}
+        name={ROUTES.DAILY_SHEET}
         component={DailySheetScreen}
         options={{
           tabBarIcon: ({ color }) => TabIcon(CalendarCheck, color),
@@ -75,7 +75,7 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name={ROUTES.HABIT_LIBRARY as 'Biblioteca'}
+        name={ROUTES.HABIT_LIBRARY}
         component={HabitLibraryScreen}
         options={{
           tabBarIcon: ({ color }) => TabIcon(BookOpen, color),

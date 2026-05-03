@@ -127,8 +127,11 @@ export async function hasDailyAssignmentsTable(): Promise<boolean> {
   return (result?.count ?? 0) > 0;
 }
 
-// ─── Migración (para DBs existentes sin is_active) ──────────────────
+// ─── Migración legacy (para DBs existentes sin is_active) ───────────
+// Predates the Phase-4 versioned migration system (runMigrations / PRAGMA user_version).
 
+// Legacy pre-versioning migration — ran before the Phase-4 versioned system (runMigrations).
+// Safe to keep: IF NOT EXISTS equivalent (checks column presence before ALTER).
 async function migrateSchema(db: SQLite.SQLiteDatabase): Promise<void> {
   const cols = await db.getAllAsync<{ name: string }>(
     'PRAGMA table_info(habits)',
