@@ -76,7 +76,7 @@ export const useSettingsStore = create<SettingsState>()(
       toggleHaptics: () => set((s) => ({ hapticsEnabled: !s.hapticsEnabled })),
       toggleSounds: () => set((s) => ({ soundsEnabled: !s.soundsEnabled })),
       toggleVoiceDictation: () => set((s) => ({ voiceDictationEnabled: !s.voiceDictationEnabled })),
-      setLanguage: (lang) => set({ language: lang }),
+      setLanguage: (lang) => set({ language: lang }), // Settings UI pending (Phase 5)
       setGoogleEmail: (email) => set({ googleEmail: email }),
       setLastBackup: (at, fileId) => set({ lastBackupAt: at, lastBackupFileId: fileId }),
       clearGoogleSession: () => set({ googleEmail: null }),

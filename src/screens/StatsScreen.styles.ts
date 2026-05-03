@@ -7,7 +7,7 @@
  */
 
 import { Dimensions, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { text, layout, card, spacing, colors } from '../styles/ui.styles';
+import { text, layout, card, spacing, colors, iconDefaults } from '../styles/ui.styles';
 import { HEATMAP_COLORS } from '../config/constants';
 
 // ─── Dimensiones calculadas ─────────────────────────────────────────
@@ -162,4 +162,4 @@ export function compBarWidth(value: number, max: number): ViewStyle {
   return { width: `${percent}%` };
 }
 
-export { colors };
+export { colors, iconDefaults };

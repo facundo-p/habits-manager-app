@@ -28,7 +28,7 @@ import { ReflectionModal } from '../components/modals/ReflectionModal';
 import { AreaInfoModal } from '../components/modals/AreaInfoModal';
 import { SpontaneousModal } from '../components/modals/SpontaneousModal';
 import {
-  styles, miniProgressFillWidth, badgeContainerStyle, colors,
+  styles, miniProgressFillWidth, badgeContainerStyle, colors, iconDefaults,
 } from './DailySheetScreen.styles';
 import type { DailyItem, DailyStats, HabitArea, FrequencyGroup, RootTabParamList } from '../types';
 import { parseAndValidateCategories } from '../utils/parsing';
@@ -144,7 +144,7 @@ function SpontaneousRow({
         <AreaBadges categories={item.categories} onBadgePress={onBadgePress} />
       </View>
       <Pressable className={styles.spontaneousDeleteBtn} onPress={onRemove}>
-        <Trash2 color={colors.amber600} size={16} />
+        <Trash2 color={colors.amber600} size={iconDefaults.small} />
       </Pressable>
     </View>
   );
@@ -344,7 +344,7 @@ export function DailySheetScreen() {
         className={styles.spontaneousButton}
         onPress={() => setSpontaneousVisible(true)}
       >
-        <Plus color={colors.amber600} size={18} />
+        <Plus color={colors.amber600} size={iconDefaults.medium} />
         <Text className={styles.spontaneousButtonText}>Añadir algo espontáneo</Text>
       </Pressable>
 

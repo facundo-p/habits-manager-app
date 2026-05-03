@@ -4,7 +4,7 @@
 
 import { StyleSheet, ViewStyle } from 'react-native';
 import {
-  text, layout, checkbox, spacing, progress, section, badge, button, colors,
+  text, layout, checkbox, spacing, progress, section, badge, button, colors, iconDefaults,
 } from '../styles/ui.styles';
 
 export const styles = {
@@ -99,4 +99,4 @@ export function badgeContainerStyle(color: string): ViewStyle {
   };
 }
 
-export { colors };
+export { colors, iconDefaults };

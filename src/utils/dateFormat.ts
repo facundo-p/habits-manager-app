@@ -9,14 +9,11 @@
  * (centralizado para evitar duplicación — CLAUDE.md Regla 3).
  */
 
-const MONTHS_ES = [
-  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
-  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
-];
+import { MONTH_NAMES_SHORT } from '../config/constants';
 
 /** Formatea una Date como "D mmm YYYY" usando abreviatura de mes en español. */
 export function formatDateEs(d: Date): string {
-  return `${d.getDate()} ${MONTHS_ES[d.getMonth()]} ${d.getFullYear()}`;
+  return `${d.getDate()} ${MONTH_NAMES_SHORT[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 /**

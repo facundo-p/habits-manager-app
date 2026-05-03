@@ -5,7 +5,6 @@
  * se necesita dinámica (opacidad, colores condicionales).
  */
 
-import { StyleSheet } from 'react-native';
 import { text, button, spacing, colors } from '../styles/ui.styles';
 
 // ─── NativeWind classes ─────────────────────────────────────────────
@@ -62,12 +61,6 @@ export const styles = {
 // ─── Native styles ──────────────────────────────────────────────────
 
 export { colors };
-
-export const nativeStyles = StyleSheet.create({
-  switchTrack: {
-    // Usado para thumbColor / trackColor en Switch
-  },
-});
 
 export const switchColors = {
   trackTrue: colors.amber400,
