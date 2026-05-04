@@ -118,17 +118,7 @@ async function executeSchema(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(SQL_CREATE_ASSIGNMENTS);
 }
 
-/** Verifica si la tabla daily_assignments ya existe (para uso externo). */
-export async function hasDailyAssignmentsTable(): Promise<boolean> {
-  const db = await getDatabase();
-  const result = await db.getFirstAsync<{ count: number }>(
-    "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='daily_assignments'",
-  );
-  return (result?.count ?? 0) > 0;
-}
-
 // ─── Migración legacy (para DBs existentes sin is_active) ───────────
-// Predates the Phase-4 versioned migration system (runMigrations / PRAGMA user_version).
 
 // Legacy pre-versioning migration — ran before the Phase-4 versioned system (runMigrations).
 // Safe to keep: IF NOT EXISTS equivalent (checks column presence before ALTER).
