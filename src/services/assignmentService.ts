@@ -14,7 +14,7 @@ import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
 import type { DailyItem, DailyStats, DailyAssignment } from '../types';
 import { buildStats } from '../utils/statsHelpers';
-import { VALID_AREA_IDS } from '../config/constants';
+import { assertValidCategories } from '../utils/validation';
 import { type Frequency } from '../utils/periodHelpers';
 
 // ─── Consultas públicas ─────────────────────────────────────────────
@@ -148,12 +148,7 @@ export async function addSpontaneous(
   datePrefix?: string,
 ): Promise<void> {
   // BUG-04: validar categorias antes de insertar
-  const invalidIds = categories.filter((id) => !VALID_AREA_IDS.has(id));
-  if (invalidIds.length > 0) {
-    throw new Error(
-      `addSpontaneous: categorias invalidas — ${invalidIds.join(', ')}`,
-    );
-  }
+  assertValidCategories(categories, 'addSpontaneous');
   const day = datePrefix ?? getTodayPrefix();
   await assignmentRepo.insert(
     null, day, name, 0,

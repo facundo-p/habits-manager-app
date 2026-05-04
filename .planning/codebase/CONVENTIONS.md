@@ -157,6 +157,9 @@ export async function ensureAssignmentsForDate(datePrefix: string): Promise<void
 - Components: UI rendering, call store actions
 - Utils: Pure functions, no side effects
 
+**Exception — Drive operations:**
+Screens (`SettingsScreen`, `RestoreFromDriveScreen`) call `driveBackupService` directly, bypassing the store layer. Drive ops are stateless (no cached state, transient tokens) — adding a store would only duplicate boilerplate. This is an intentional exception documented here.
+
 ---
 
 *Convention analysis: 2026-03-17*
