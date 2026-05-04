@@ -8,6 +8,7 @@
  */
 
 import { getTodayPrefix, getTimestampForDate, getNowTimestamp, isFutureDate } from './db';
+import { dateToPrefix } from '../utils/dateHelpers';
 import * as assignmentRepo from '../repositories/assignmentRepository';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
@@ -252,12 +253,14 @@ export async function checkAndBackfillHistory(): Promise<void> {
 
   // Rellenar desde el día siguiente al último registrado hasta hoy
   const start = nextDay(latestDate);
-  const end = new Date(`${today}T00:00:00Z`);
+  await backfillRange(start, today);
+}
 
+async function backfillRange(start: string, end: string): Promise<void> {
   const current = new Date(`${start}T00:00:00Z`);
-  while (current <= end) {
-    const dateStr = formatDateStr(current);
-    await ensureAssignmentsForDate(dateStr);
+  const endDate = new Date(`${end}T00:00:00Z`);
+  while (current <= endDate) {
+    await ensureAssignmentsForDate(dateToPrefix(current));
     current.setUTCDate(current.getUTCDate() + 1);
   }
 }
@@ -371,16 +374,12 @@ function getPeriodRange(datePrefix: string, frequency: Frequency): [string, stri
   monday.setUTCDate(d.getUTCDate() - dayOfWeek);
   const sunday = new Date(monday);
   sunday.setUTCDate(monday.getUTCDate() + 6);
-  return [formatDateStr(monday), formatDateStr(sunday)];
+  return [dateToPrefix(monday), dateToPrefix(sunday)];
 }
 
 // exported for unit tests
 export function nextDay(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + 1);
-  return formatDateStr(d);
-}
-
-function formatDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return dateToPrefix(d);
 }

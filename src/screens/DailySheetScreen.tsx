@@ -11,16 +11,17 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, Pressable, ActivityIndicator, ScrollView, Alert } from 'react-native';
+import { View, Text, FlatList, Pressable, ActivityIndicator, ScrollView } from 'react-native';
 import { Check, Plus, Trash2 } from 'lucide-react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useHabitStore } from '../store/useHabitStore';
 import { useFeedback } from '../hooks/useFeedback';
+import { useDailySheetHandlers } from '../hooks/useDailySheetHandlers';
 import {
-  CHECKBOX_ICON_SIZE, ALERT_UNMARK, ALERT_UNMARK_SPONTANEOUS,
+  CHECKBOX_ICON_SIZE,
   FREQUENCY_LABELS, SPONTANEOUS_SECTION_LABEL,
-  AREAS_MAP, ROUTES,
+  AREAS_MAP,
 } from '../config/constants';
 import { NotebookPaper } from '../components/layout/NotebookPaper';
 import { AppScreenHeader } from '../components/layout/AppScreenHeader';
@@ -59,14 +60,6 @@ function groupByFrequency(items: DailyItem[]): {
     .filter((g) => g.items.length > 0);
 
   return { groups, spontaneous };
-}
-
-function confirmUnmark(item: DailyItem, toggle: (i: DailyItem) => Promise<void>) {
-  const alert = item.isSpontaneous ? ALERT_UNMARK_SPONTANEOUS : ALERT_UNMARK;
-  Alert.alert(alert.title, alert.message, [
-    { text: alert.cancel, style: 'cancel' },
-    { text: alert.confirm, style: 'destructive', onPress: () => toggle(item) },
-  ]);
 }
 
 // ─── Sub-componentes ────────────────────────────────────────────────
@@ -227,7 +220,7 @@ export function DailySheetScreen() {
   const routeDate = (route.params as { date?: string } | undefined)?.date ?? null;
 
   const {
-    dailyItems, dailyStats, isLoading, pendingReflection, viewDate,
+    dailyItems, isLoading, pendingReflection, viewDate,
     resetToToday, setViewDate, fetchHabitsForDate,
     toggleItem, openEditReflection, saveReflection, skipReflection,
     addSpontaneous, removeSpontaneousItem,
@@ -252,62 +245,22 @@ export function DailySheetScreen() {
     }, [viewDate, fetchHabitsForDate]),
   );
 
-  const handlePress = useCallback(
-    (item: DailyItem) => {
-      if (item.isCompleted) {
-        confirmUnmark(item, toggleItem);
-      } else {
-        toggleItem(item).then(() => triggerSuccess());
-      }
-    },
-    [toggleItem, triggerSuccess],
-  );
-
-  const handleLongPress = useCallback(
-    (item: DailyItem) => {
-      if (item.isCompleted && item.habitId) openEditReflection(item);
-    },
-    [openEditReflection],
-  );
-
-  const handleBadgePress = useCallback((areaId: string) => {
-    setSelectedArea(AREAS_MAP[areaId] ?? null);
-  }, []);
-
-  const handleRemoveSpontaneous = useCallback(
-    (item: DailyItem) => {
-      Alert.alert(
-        ALERT_UNMARK_SPONTANEOUS.title,
-        ALERT_UNMARK_SPONTANEOUS.message,
-        [
-          { text: ALERT_UNMARK_SPONTANEOUS.cancel, style: 'cancel' },
-          {
-            text: ALERT_UNMARK_SPONTANEOUS.confirm,
-            style: 'destructive',
-            onPress: () => removeSpontaneousItem(item),
-          },
-        ],
-      );
-    },
-    [removeSpontaneousItem],
-  );
-
-  const handleSaveSpontaneous = useCallback(
-    (name: string, categories: string[]) => {
-      addSpontaneous(name, categories).then(() => {
-        triggerSuccess();
-        setSpontaneousVisible(false);
-      });
-    },
-    [addSpontaneous, triggerSuccess],
-  );
-
-  // ── 3. Guardar y Volver: dismiss reflection + reset + ir a Stats ──
-  const handleGoBack = useCallback(() => {
-    skipReflection();
-    resetToToday();
-    navigation.navigate(ROUTES.STATS as 'Progreso');
-  }, [skipReflection, resetToToday, navigation]);
+  // ── 3. Handlers de eventos ────────────────────────────────────────
+  const {
+    handlePress, handleLongPress, handleBadgePress,
+    handleRemoveSpontaneous, handleSaveSpontaneous, handleGoBack,
+  } = useDailySheetHandlers({
+    navigation,
+    toggleItem,
+    openEditReflection,
+    removeSpontaneousItem,
+    addSpontaneous,
+    skipReflection,
+    resetToToday,
+    triggerSuccess,
+    setSelectedArea,
+    setSpontaneousVisible,
+  });
 
   const { groups, spontaneous } = groupByFrequency(dailyItems);
 
