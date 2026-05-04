@@ -14,14 +14,8 @@ const SQL_ACTIVE = 'SELECT * FROM habits WHERE is_active = 1';
 
 const SQL_ALL = 'SELECT * FROM habits';
 
-const SQL_DAILY_ACTIVE =
-  "SELECT * FROM habits WHERE frequency = 'daily' AND is_active = 1";
-
 const SQL_SUM_BY_FREQ =
   'SELECT COALESCE(SUM(base_points), 0) as total FROM habits WHERE frequency = ? AND is_active = 1';
-
-const SQL_SUM_DAILY_ACTIVE =
-  "SELECT COALESCE(SUM(base_points), 0) as total FROM habits WHERE frequency = 'daily' AND is_active = 1";
 
 const SQL_INSERT =
   'INSERT INTO habits (id, name, frequency, base_points, default_categories) VALUES (?, ?, ?, ?, ?)';
@@ -49,12 +43,6 @@ export async function findAll(): Promise<Habit[]> {
   return db.getAllAsync<Habit>(SQL_ALL);
 }
 
-/** Todos los hábitos diarios activos. */
-export async function findDailyActive(): Promise<Habit[]> {
-  const db = await getDatabase();
-  return db.getAllAsync<Habit>(SQL_DAILY_ACTIVE);
-}
-
 /** Suma de base_points para una frecuencia dada (solo activos). */
 export async function sumPointsByFrequency(freq: string): Promise<number> {
   const db = await getDatabase();
@@ -66,13 +54,6 @@ export async function sumPointsByFrequency(freq: string): Promise<number> {
 export async function findById(id: string): Promise<Habit | null> {
   const db = await getDatabase();
   return db.getFirstAsync<Habit>(SQL_FIND_BY_ID, [id]);
-}
-
-/** Suma de base_points de hábitos diarios activos. */
-export async function sumDailyActivePoints(): Promise<number> {
-  const db = await getDatabase();
-  const row = await db.getFirstAsync<{ total: number }>(SQL_SUM_DAILY_ACTIVE);
-  return row?.total ?? 0;
 }
 
 // ─── Mutaciones ─────────────────────────────────────────────────────

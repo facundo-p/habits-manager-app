@@ -14,12 +14,7 @@ import * as taskRepo from '../repositories/taskRepository';
 import type { DailyItem, DailyStats, DailyAssignment } from '../types';
 import { buildStats } from '../utils/statsHelpers';
 import { VALID_AREA_IDS } from '../config/constants';
-import { getPeriodKey, type Frequency } from '../utils/periodHelpers';
-
-// `getPeriodKey` se importa para validación de invariantes futura — actualmente
-// la propagación usa `getPeriodRange` (helper interno). Se mantiene el import para
-// que dependencias inversas (D-01) queden documentadas en el grafo del módulo.
-void getPeriodKey;
+import { type Frequency } from '../utils/periodHelpers';
 
 // ─── Consultas públicas ─────────────────────────────────────────────
 
@@ -379,6 +374,7 @@ function getPeriodRange(datePrefix: string, frequency: Frequency): [string, stri
   return [formatDateStr(monday), formatDateStr(sunday)];
 }
 
+// exported for unit tests
 export function nextDay(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + 1);

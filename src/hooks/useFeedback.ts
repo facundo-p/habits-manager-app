@@ -17,10 +17,5 @@ export function useFeedback() {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }, [hapticsEnabled]);
 
-  const triggerLight = useCallback(async () => {
-    if (!hapticsEnabled) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, [hapticsEnabled]);
-
-  return { triggerSuccess, triggerLight };
+  return { triggerSuccess };
 }
