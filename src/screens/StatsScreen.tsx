@@ -21,7 +21,7 @@ import {
 } from '../services/statsService';
 import {
   styles, nativeStyles, chartConfig, heatmapCellBg, heatmapTextStyle, compBarWidth,
-  colors, CHART_WIDTH, CHART_HEIGHT,
+  colors, iconDefaults, CHART_WIDTH, CHART_HEIGHT,
 } from './StatsScreen.styles';
 import type { DaySummaryHabit, CategoryPoints, WeeklyComparison, RootTabParamList } from '../types';
 
@@ -162,11 +162,11 @@ function MonthNavigator({ month, year, onPrev, onNext }: { month: number; year: 
   return (
     <View className={styles.monthNav}>
       <Pressable className={styles.navButton} onPress={onPrev}>
-        <ChevronLeft color={colors.amber700} size={22} />
+        <ChevronLeft color={colors.amber700} size={iconDefaults.size} />
       </Pressable>
       <Text className={styles.monthLabel}>{MONTH_NAMES[month - 1]} {year}</Text>
       <Pressable className={styles.navButton} onPress={onNext}>
-        <ChevronRight color={colors.amber700} size={22} />
+        <ChevronRight color={colors.amber700} size={iconDefaults.size} />
       </Pressable>
     </View>
   );
@@ -214,7 +214,7 @@ function DayDetailCard({ day, month, habits, onEdit }: {
           Hábitos del {day} de {MONTH_NAMES[month - 1].toLowerCase()}
         </Text>
         <Pressable className={styles.navButton} onPress={onEdit}>
-          <Edit3 color={colors.amber700} size={18} strokeWidth={1.8} />
+          <Edit3 color={colors.amber700} size={iconDefaults.medium} strokeWidth={iconDefaults.strokeWidth} />
         </Pressable>
       </View>
       {regular.length === 0 && spontaneous.length === 0 ? (
@@ -240,8 +240,8 @@ function DaySummaryRow({ habit }: { habit: DaySummaryHabit }) {
   return (
     <View className={styles.detailRow}>
       {habit.completed
-        ? <Check color={colors.sage700} size={16} />
-        : <X color={colors.amber400} size={16} />
+        ? <Check color={colors.sage700} size={iconDefaults.small} />
+        : <X color={colors.amber400} size={iconDefaults.small} />
       }
       <Text className={habit.completed ? styles.detailDone : styles.detailMissed}>
         {habit.name}

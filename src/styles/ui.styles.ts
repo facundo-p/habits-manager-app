@@ -193,4 +193,6 @@ export const tabBarTheme = {
 export const iconDefaults = {
   size: 22,
   strokeWidth: 1.8,
+  small: 16,
+  medium: 18,
 } as const;
