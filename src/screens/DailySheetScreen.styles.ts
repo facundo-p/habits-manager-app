@@ -81,11 +81,6 @@ export const nativeStyles = StyleSheet.create({
   },
 });
 
-/** Ancho dinámico de la barra de progreso global. */
-export function progressFillWidth(percentage: number): ViewStyle {
-  return { width: `${Math.min(percentage, 100)}%` };
-}
-
 /** Ancho dinámico de la mini barra de progreso. */
 export function miniProgressFillWidth(percentage: number): ViewStyle {
   return { width: `${Math.min(percentage, 100)}%` };

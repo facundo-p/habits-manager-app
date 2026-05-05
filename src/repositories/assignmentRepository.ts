@@ -115,9 +115,6 @@ export const SQL_CREATE_UNIQUE_INDEX = `
   WHERE habit_id IS NOT NULL
 `;
 
-const SQL_COUNT_BY_HABIT_AND_DATE =
-  'SELECT COUNT(*) as count FROM daily_assignments WHERE habit_id = ? AND date = ?';
-
 // ─── SQL Constants para visibility de período (REQ-04-10/11) ────────
 
 const SQL_SET_COMPLETED_FOR_HABIT_IN_RANGE = `
@@ -199,19 +196,6 @@ export async function findByHabitAndDate(
 ): Promise<DailyAssignment | null> {
   const db = await getDatabase();
   return db.getFirstAsync<DailyAssignment>(SQL_FIND_BY_HABIT_AND_DATE, [habitId, datePrefix]);
-}
-
-/** Cuenta rows para un (habit_id, date). Útil para invariantes runtime (REQ-04-02). */
-export async function countByHabitAndDate(
-  habitId: string,
-  datePrefix: string,
-): Promise<number> {
-  const db = await getDatabase();
-  const row = await db.getFirstAsync<{ count: number }>(
-    SQL_COUNT_BY_HABIT_AND_DATE,
-    [habitId, datePrefix],
-  );
-  return row?.count ?? 0;
 }
 
 /** Lista grupos duplicados (habit_id, date, count). Util para invariantes y tests. */

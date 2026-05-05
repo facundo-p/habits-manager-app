@@ -71,18 +71,28 @@ export function StatsScreen() {
   const handleEditDay = useCallback(() => {
     if (selectedDay === null) return;
     const dateStr = buildDateStr(year, month, selectedDay);
-    navigation.navigate(ROUTES.DAILY_SHEET as 'Hoy', { date: dateStr });
+    navigation.navigate(ROUTES.DAILY_SHEET, { date: dateStr });
   }, [selectedDay, month, year, navigation]);
 
   const goToPrev = useCallback(() => {
-    if (month === 1) setYear((y) => y - 1);
-    setMonth((m) => (m === 1 ? 12 : m - 1));
-  }, [month]);
+    setMonth((m) => {
+      if (m === 1) {
+        setYear((y) => y - 1);
+        return 12;
+      }
+      return m - 1;
+    });
+  }, []);
 
   const goToNext = useCallback(() => {
-    if (month === 12) setYear((y) => y + 1);
-    setMonth((m) => (m === 12 ? 1 : m + 1));
-  }, [month]);
+    setMonth((m) => {
+      if (m === 12) {
+        setYear((y) => y + 1);
+        return 1;
+      }
+      return m + 1;
+    });
+  }, []);
 
   if (isLoading) {
     return (

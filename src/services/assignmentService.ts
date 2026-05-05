@@ -8,18 +8,14 @@
  */
 
 import { getTodayPrefix, getTimestampForDate, getNowTimestamp, isFutureDate } from './db';
+import { dateToPrefix } from '../utils/dateHelpers';
 import * as assignmentRepo from '../repositories/assignmentRepository';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
 import type { DailyItem, DailyStats, DailyAssignment } from '../types';
 import { buildStats } from '../utils/statsHelpers';
-import { VALID_AREA_IDS } from '../config/constants';
-import { getPeriodKey, type Frequency } from '../utils/periodHelpers';
-
-// `getPeriodKey` se importa para validación de invariantes futura — actualmente
-// la propagación usa `getPeriodRange` (helper interno). Se mantiene el import para
-// que dependencias inversas (D-01) queden documentadas en el grafo del módulo.
-void getPeriodKey;
+import { assertValidCategories } from '../utils/validation';
+import { type Frequency } from '../utils/periodHelpers';
 
 // ─── Consultas públicas ─────────────────────────────────────────────
 
@@ -151,12 +147,7 @@ export async function addSpontaneous(
   categories: string[],
   datePrefix?: string,
 ): Promise<void> {
-  const invalidIds = categories.filter((id) => !VALID_AREA_IDS.has(id));
-  if (invalidIds.length > 0) {
-    throw new Error(
-      `addSpontaneous: categorias invalidas — ${invalidIds.join(', ')}`,
-    );
-  }
+  assertValidCategories(categories, 'addSpontaneous');
   const day = datePrefix ?? getTodayPrefix();
   await assignmentRepo.insert(
     null, day, name, 0,
@@ -256,12 +247,14 @@ export async function checkAndBackfillHistory(): Promise<void> {
 
   // Rellenar desde el día siguiente al último registrado hasta hoy
   const start = nextDay(latestDate);
-  const end = new Date(`${today}T00:00:00Z`);
+  await backfillRange(start, today);
+}
 
+async function backfillRange(start: string, end: string): Promise<void> {
   const current = new Date(`${start}T00:00:00Z`);
-  while (current <= end) {
-    const dateStr = formatDateStr(current);
-    await ensureAssignmentsForDate(dateStr);
+  const endDate = new Date(`${end}T00:00:00Z`);
+  while (current <= endDate) {
+    await ensureAssignmentsForDate(dateToPrefix(current));
     current.setUTCDate(current.getUTCDate() + 1);
   }
 }
@@ -374,15 +367,12 @@ function getPeriodRange(datePrefix: string, frequency: Frequency): [string, stri
   monday.setUTCDate(d.getUTCDate() - dayOfWeek);
   const sunday = new Date(monday);
   sunday.setUTCDate(monday.getUTCDate() + 6);
-  return [formatDateStr(monday), formatDateStr(sunday)];
+  return [dateToPrefix(monday), dateToPrefix(sunday)];
 }
 
+// exported for unit tests
 export function nextDay(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + 1);
-  return formatDateStr(d);
-}
-
-function formatDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return dateToPrefix(d);
 }

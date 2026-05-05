@@ -7,8 +7,8 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { Modal, KeyboardAvoidingView, Platform, Animated, BackHandler } from 'react-native';
-import { styles, nativeStyles, OFFSCREEN_Y } from './BottomSheet.styles';
+import { Modal, KeyboardAvoidingView, Platform, Animated, BackHandler, useWindowDimensions } from 'react-native';
+import { styles, nativeStyles } from './BottomSheet.styles';
 
 interface BottomSheetProps {
   visible: boolean;
@@ -17,7 +17,9 @@ interface BottomSheetProps {
 }
 
 export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
-  const translateY = useRef(new Animated.Value(OFFSCREEN_Y)).current;
+  const { height } = useWindowDimensions();
+  const offscreenY = -height * 0.8;
+  const translateY = useRef(new Animated.Value(offscreenY)).current;
 
   // ─── Android hardware back button ───────────────────────────────
   useEffect(() => {
@@ -36,9 +38,9 @@ export function BottomSheet({ visible, onClose, children }: BottomSheetProps) {
     if (visible) {
       animateIn(translateY);
     } else {
-      animateOut(translateY);
+      animateOut(translateY, offscreenY);
     }
-  }, [visible, translateY]);
+  }, [visible, translateY, offscreenY]);
 
   return (
     <Modal
@@ -74,9 +76,9 @@ function animateIn(translateY: Animated.Value) {
   }).start();
 }
 
-function animateOut(translateY: Animated.Value) {
+function animateOut(translateY: Animated.Value, toValue: number) {
   Animated.timing(translateY, {
-    toValue: OFFSCREEN_Y,
+    toValue,
     duration: 200,
     useNativeDriver: true,
   }).start();

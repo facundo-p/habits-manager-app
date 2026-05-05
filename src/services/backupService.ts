@@ -100,7 +100,13 @@ export function parseAndValidate(json: string): BackupData {
 
   const data = raw as Record<string, unknown>;
 
-  if (typeof data.version !== 'number' || !Array.isArray(data.habits)) {
+  if (typeof data.version !== 'number' || data.version > BACKUP_VERSION) {
+    throw new Error(`Versión de respaldo no soportada: ${data.version}`);
+  }
+  if (data.version < BACKUP_VERSION) {
+    console.warn(`[parseAndValidate] backup version ${data.version} < ${BACKUP_VERSION}`);
+  }
+  if (!Array.isArray(data.habits)) {
     throw new Error('Formato de respaldo inválido');
   }
   if (!Array.isArray(data.performed_habits)) {
