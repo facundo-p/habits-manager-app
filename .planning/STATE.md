@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: verifying
 stopped_at: Completed 04-04-PLAN.md (Phase 4 closed)
-last_updated: "2026-05-01T05:29:22.066Z"
-last_activity: 2026-05-01
+last_updated: "2026-05-05T04:47:18.695Z"
+last_activity: 2026-05-05
 progress:
   total_phases: 4
   completed_phases: 4
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 Phase: 04
 Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-05-04 - Completed quick task 260504-qu5: Fix app timezone: use local OS time instead of UTC for day boundary
+Last activity: 2026-05-05
 
 Progress: [███░░░░░░░] 33%
 
@@ -105,6 +105,20 @@ None yet.
 
 - [Phase 3 — Active]: **Runtime OAuth bloqueado** post 03-01. El código está completo (SDK + plugin + service + hook), pero los OAuth clients reales no existen en GCP Console. El silent sign-in fallará en device hasta que el usuario complete: consent screen + 3 OAuth clients (Web/iOS/Android con SHA-1) + 3 envs + reemplazar `iosUrlScheme` placeholder en app.json + EAS dev build. Detalles completos en `.planning/phases/03-google-drive-backup/03-01-SUMMARY.md` §"Deferred / Pending User Setup". 03-02 y 03-03 pueden seguir desarrollándose con SDK mockeado en tests.
 - [Phase 3]: EAS build requerido para testear OAuth — Expo Go no puede testear este flujo (D-04).
+
+## Deferred Items
+
+Items acknowledged and deferred at v1.0 milestone close on 2026-05-05:
+
+| Category | Item | Status |
+|----------|------|--------|
+| debug_session | dev-db-wiped-post-phase4 | abandoned |
+| quick_task | 260504-qu5-fix-timezone-utc-to-local | unknown |
+| uat_gap | Phase 02: 02-HUMAN-UAT.md (2 pending scenarios) | partial |
+| uat_gap | Phase 04: 04-HUMAN-UAT.md (3 pending scenarios) | partial |
+| verification_gap | Phase 02: 02-VERIFICATION.md | human_needed |
+| verification_gap | Phase 03: 03-VERIFICATION.md | human_needed |
+| verification_gap | Phase 04: 04-VERIFICATION.md | human_needed |
 
 ## Session Continuity
 
