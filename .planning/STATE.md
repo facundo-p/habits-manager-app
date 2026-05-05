@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 Phase: 04
 Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-05-01
+Last activity: 2026-05-04 - Completed quick task 260504-qu5: Fix app timezone: use local OS time instead of UTC for day boundary
 
 Progress: [███░░░░░░░] 33%
 
@@ -94,6 +94,12 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 None yet.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260504-qu5 | Fix app timezone: use local OS time instead of UTC for day boundary | 2026-05-04 | 74dfc00 | [260504-qu5-fix-timezone-utc-to-local](./quick/260504-qu5-fix-timezone-utc-to-local/) |
 
 ### Blockers/Concerns
 
