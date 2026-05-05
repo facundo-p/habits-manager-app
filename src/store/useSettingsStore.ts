@@ -67,7 +67,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       hapticsEnabled: true,
       soundsEnabled: true,
-      voiceDictationEnabled: true,
+      voiceDictationEnabled: true, // TODO: expose toggle in Settings (Phase 5)
       language: 'es',
       googleEmail: null,
       lastBackupAt: null,

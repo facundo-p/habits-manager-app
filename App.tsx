@@ -109,7 +109,7 @@ export default function App() {
     // `.then(() => tuFuncion())` después de checkAndBackfillHistory.
     initDatabase()
       .then(() => checkAndBackfillHistory())
-      .then(() => console.log('DB inicializada y backfill completado'))
+      .then(() => { if (__DEV__) console.log('DB inicializada y backfill completado'); })
       .catch((err) => console.error('Error inicializando DB:', err));
   }, []);
 
