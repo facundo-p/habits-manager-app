@@ -1,6 +1,7 @@
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: 'node',
+  watchman: false,
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       diagnostics: false, // no type-check en tests; solo verificamos comportamiento
