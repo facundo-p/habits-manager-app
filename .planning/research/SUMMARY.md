@@ -1,202 +1,160 @@
 # Project Research Summary
 
-**Project:** Cozy Habits — Google Drive Backup Milestone
-**Domain:** Mobile habit tracker — bug fixes, tech debt cleanup, Google Drive cloud backup
-**Researched:** 2026-03-17
-**Confidence:** HIGH
+**Project:** Cozy Habits — v1.1 Bienestar emocional
+**Domain:** React Native / Expo brownfield extension — emotional wellbeing capture, visualization & weekly reflection
+**Researched:** 2026-05-06
+**Confidence:** HIGH (stack + architecture); MEDIUM-HIGH on features/UX; MEDIUM on expo-notifications platform edges
 
 ## Executive Summary
 
-This milestone adds Google Drive cloud backup to an existing habit tracker app that already has a working local backup/restore system via the OS share sheet. The app runs on Expo SDK 54 / React Native 0.81 with expo-sqlite and Zustand. The recommended approach treats Drive as a second transport layer over the existing backup logic — `buildBackupData()` and `parseAndValidate()` are promoted to exported helpers shared by the new `driveBackupService.ts`, so backup serialization remains in a single place. The critical library choice is `@react-native-google-signin/google-signin` (not `expo-auth-session/providers/google`) because expo-auth-session cannot inject the `drive.appdata` scope — a confirmed open issue. This requires a development build rather than Expo Go, but the project already has `expo-dev-client` installed.
+v1.1 is an additive milestone on top of a layered, local-first React Native app (Expo 54, Zustand, expo-sqlite). Eight new features (A.1–A.4 capture, B.1/B.2/B.4 visualization, C.1 weekly review) plus configurable push notifications layer cleanly onto the existing Screen → Store → Service → Repository → SQLite stack. The integration shape matters more than any single feature: a single shared `MoodPicker` component, a single `getLocalDayKey()` helper, and a single migration v2 introducing five new wellbeing tables are the linchpins.
 
-Before any Drive work, four correctness bugs in the daily assignments system must be fixed. One causes silent data corruption: the backfill guard counts only non-spontaneous rows, so dates with only spontaneous records get flooded with phantom regular habit assignments. The others involve UTC/local timezone drift in date iteration, a duplicate future-date guard, and unvalidated category IDs stored at insert time. These bugs directly affect the data that would be backed up to Drive, so fixing them first is non-negotiable.
+The recommended approach reuses everything already in the stack (existing `@react-native-community/slider`, `react-native-chart-kit` for line/bar/contribution graphs, `TextInput` for journaling, Zustand for flow state) and adds **only two dependencies**: `expo-notifications` (~0.32.17) and `@react-native-community/datetimepicker` (~8.4.x). No chart-library swap, no state-machine library, no rich-text editor, no second mood-input UI.
 
-The primary risks for the Drive phase are OAuth token refresh gaps (no refresh token returned if `access_type=offline` is omitted), wrong Drive scope selection (tutorials default to `drive.file` which prevents silent re-listing of own backups — `drive.appdata` is correct), and a destructive restore flow with no user confirmation. All three have clear, well-documented mitigations and must be addressed before the Drive feature goes live.
-
----
+The dominant risks are subtle and correlated: (1) day-key drift across features (qu5 precedent); (2) mood scale shape change post-launch; (3) backup/restore version skew; (4) notification antipatterns (Android 12+ doze, orphan schedules, TZ change, dark-pattern copy); (5) wellbeing UX antipatterns (streak shaming, spurious correlations on small N). All have concrete mitigations in PITFALLS.md.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing stack requires one new dependency: `@react-native-google-signin/google-signin` for Google OAuth with custom scope support. Drive API calls use the built-in `fetch` against Google Drive REST API v3 — no wrapper library is needed for the three calls required (list, upload, download). Token storage uses `expo-secure-store`, already bundled in Expo SDK 54. The Drive scope is `drive.appdata` (hidden app folder, non-sensitive, no Google security review required).
+The v1.0 stack is preserved entirely. Only **two new dependencies** in v1.1:
 
-**Core technologies:**
-- `@react-native-google-signin/google-signin` ^14.x: Google OAuth with `drive.appdata` scope — the only library that supports custom Drive scopes reliably in Expo SDK 54; expo-auth-session is confirmed broken for this use case
-- Native `fetch`: Google Drive REST API v3 calls (upload, list, download) — zero dependency overhead for three straightforward HTTP calls
-- `expo-secure-store` ^14.x: OAuth token persistence — Keychain/Keystore-backed, already in SDK 54 bundle
-- `drive.appdata` scope: Hidden app-specific Drive folder, invisible in user's Drive UI, non-sensitive (no Google review required)
+- `expo-notifications@~0.32.17` — `DAILY` / `WEEKLY` recurring triggers; well under iOS 64-cap; OS-managed. Requires `app.json` plugin entry for Android icon. New dev-client build needed.
+- `@react-native-community/datetimepicker@~8.4.x` — native time picker for Settings. Install both via `npx expo install`.
 
-**Critical constraint:** This feature requires a development build. It cannot be tested in Expo Go.
+**Critical reuse decisions (no new package):**
+
+- Mood input: extract `MoodPicker` shared component from the existing `ReflectionModal` `MoodSection`.
+- Sleep input: reuse same Slider with bounds 0–14h step 0.25.
+- Charts: `LineChart`, `BarChart` (sleep↔mood is a **bucketed bar**, not scatter — chart-kit has no scatter), `ContributionGraph` — all in existing `react-native-chart-kit@^6.12.0`.
+- Check-in flow state: Zustand slices. No XState/react-hook-form.
 
 ### Expected Features
 
 **Must have (table stakes):**
-- Sign in with Google — required to access Drive API
-- Upload backup to Drive — core feature, reuses existing `buildBackupData()`
-- Download and restore backup from Drive — pipes to existing `restoreData()`
-- Last backup timestamp display — users need confirmation the backup worked
-- Manual trigger via Settings button — users expect explicit control
-- Sign out / disconnect — users must be able to revoke access
-- Explicit confirmation modal before restore — silent destructive overwrite is unacceptable
-- Actionable error messages — silent Drive failures are unacceptable
+A.1 Morning check-in (mood + sleep + comment, idempotent 1×/day) · A.3 Evening check-in (symmetric) · A.2 Free-form mood notes (N/day, FAB) · B.1 Emotional timeline (day view) · Push notifications morning + evening · Unified MoodPicker (foundation).
 
-**Bug fixes (must precede Drive work):**
-- Bug 2: Backfill incorrectly floods days that have only spontaneous records with phantom regular assignments
-- Bug 4: Timezone drift in backfill date iteration (local vs UTC constructors)
-- Bug 3: Duplicate future-date guard (DRY refactor)
-- Bug 5: Unvalidated category IDs stored on spontaneous insert
+**Should have (competitive differentiators):**
+B.2 Wellbeing stats (mood avg + distribution + bucketed sleep↔mood, N≥14 gate) · B.4 Journaling notebook (calendar + swipe) · A.4 Phrases collection (widget-ready schema) · B.1 week view · B.2 Habits-on-good-days (uniquely possible because Cozy already has habit data).
 
-**Tech debt (should precede Drive work):**
-- TD-2: Centralize JSON category parsing through a single `parseJsonArray` / `parseAndValidateCategories` path
-- TD-3: Type `sanitizeTable` results with explicit interfaces using `unknown` intermediate, not `as` assertions
-- TD-1: Define `SpeechModuleInterface` to remove `any` typing in `useSpeechRecognition`
-
-**Should have (differentiators, after table stakes):**
-- Named backup files with date: `cozyhabits-2026-03-17.json` — low effort
-- Backup history list: show last N backups from Drive — medium effort
+**Cut first if pressed (per PROJECT.md):**
+C.1 Weekly review · B.2 habits-on-good-days · push for weekly review.
 
 **Defer (v2+):**
-- Automatic background backup — `expo-background-fetch` is unreliable on iOS; risk outweighs convenience
-- Backup encryption — Drive TLS + appdata scope is sufficient; key management adds disproportionate complexity
-- Multi-cloud support — each provider is a separate integration; Drive only for v1
-- Real-time bidirectional sync — conflict resolution complexity is out of scope for a personal-use app
+A.4 home-screen widget (Issue #20 future scope) · voice-to-text on notes · notification snooze · journal export.
+
+**Anti-features (confirmed out):**
+AI/NLP sentiment · proactive mood pushes · journal share · partner mode · daily prompts · "insights" cards · multi-dimensional mood · feeling tags · streaks/badges/social comparison.
 
 ### Architecture Approach
 
-Extend the existing layered architecture (Screen → Store → Service → Repository → SQLite) with a single new service, `driveBackupService.ts`, that handles all Google OAuth and Drive API communication. Auth state (`googleIsSignedIn`, `googleUserEmail`) is added to the existing `useSettingsStore` — not a new store — because it is a persistent setting, not domain data. The backup serialization logic (`buildBackupData`, `parseAndValidate`) is promoted from private to exported in `backupService.ts` and reused by the Drive service, keeping JSON format logic in a single place.
+Brownfield integration that respects existing layers exactly.
 
-**Major components:**
-1. `driveBackupService.ts` (new): `signIn()`, `signOut()`, `backupToDrive()`, `restoreFromDrive()` — exclusive owner of all Google API calls
-2. `useSettingsStore` (extended): `googleIsSignedIn: boolean`, `googleUserEmail: string | null`, `setGoogleAuth()` — persisted to `settings.json`
-3. `backupService.ts` (refactored): `buildBackupData()` and `parseAndValidate()` promoted to named exports
-4. `SettingsScreen` (extended): Google Drive section with sign-in/out button, backup/restore triggers, last backup timestamp
+**Key decisions:**
+
+1. **Split-tables schema** (not polymorphic). Five tables: `morning_checkins`, `evening_checkins`, `mood_notes`, `quotes`, `weekly_reviews`. UNIQUE(date) on check-ins enforces idempotency at schema level.
+2. **Mood SoT, no data migration.** Existing `mood_entries` already uses [1, 10] step 0.5; new tables adopt the same scale. New `src/config/mood.ts` re-exports constants + adds discrete labels. Shared `<MoodPicker>` is the only mood UI; `ReflectionModal` is refactored to use it.
+3. **Single migration v2, atomic.** One `migrationV2.ts` adds all 5 tables + indices in one transaction. `mood_scale_version` column on every mood-bearing row from day 1.
+4. **Single `useEmotionalStore`.** Mirrors `useHabitStore` pattern. Stores never call each other; services compose repositories.
+5. **Read-time timeline aggregation** via `emotionalTimelineService` (UNION ALL). Reject denormalized `events` table.
+6. **Notifications: new service + Settings slice.** Single `notificationsService.ts` is the only file calling `expo-notifications`. Scheduled IDs in `useSettingsStore`, not SQLite.
+7. **BACKUP_VERSION = 2.** Graceful v1→v2 dispatcher; v1 backups treat new arrays as `[]`. Notification prefs stay in settings.json.
+
+**Major components:** MoodPicker · Migration v2 · 5 repos + 5 services · `useEmotionalStore` · `emotionalTimelineService` · `notificationsService` + Settings slice · WellbeingStatsSection (sub-section in existing StatsScreen) · 4 new screens (EmotionalTimeline, Journal, Quotes, WeeklyReview).
 
 ### Critical Pitfalls
 
-1. **Backfill duplicates on spontaneous-only days** — Replace the count query guard in `ensureAssignmentsForDate` to use `countByDate` (all rows) instead of `countHabitAssignmentsByDate` (non-null habit_id only). This is the highest-priority fix; it causes silent data corruption affecting stats.
+1. **Inconsistent "today" across features (qu5 precedent).** → Single `getLocalDayKey()` helper in `src/utils/date.ts`; forbid `toISOString().slice(0,10)` via grep/lint; capture day key at submit, not modal open; cross-midnight unit test.
+2. **Idempotency race on check-ins.** → Schema-level UNIQUE INDEX + UPSERT; disable submit while in-flight.
+3. **Mood scale shape change without versioning.** → `mood_scale_version` column on every mood-bearing row from migration v2 (default `'v1'`). Migrations never rewrite historical mood values.
+4. **Backup version skew.** → Bump `BACKUP_VERSION = 2` in same commit as migration v2; graceful v1→v2 dispatcher; fixture tests both directions; Drive + local share dispatcher.
+5. **Notification antipatterns** (Android 12+ doze, orphan schedules, TZ change, shaming copy). → Single `notificationsService`; persist all IDs by purpose; reconcile on foreground; channels at App.tsx boot before any schedule call; permission denied → banner, never re-prompt; **no "we miss you" copy, no streaks, no nag UI**; test only via `build-apk-local` skill.
 
-2. **Destructive restore with no confirmation** — Before any restore (local or Drive), show a modal displaying the backup date, record counts, and explicit warning that current data will be replaced. Never label the action "Sync."
-
-3. **Missing refresh token from OAuth** — Must include `access_type=offline` and `prompt=consent` in the authorization request. Must use the Web Application OAuth client ID (not Android). Store tokens in `expo-secure-store`. Implement token refresh before every Drive API call.
-
-4. **Wrong Drive scope** — Use `drive.appdata` exclusively, not `drive.file` or `drive`. Use `spaces: 'appDataFolder'` in all list queries. Use `parents: ['appDataFolder']` on upload. `drive.file` prevents silent re-listing of own files; `drive` triggers a Google security audit.
-
-5. **Timezone drift in backfill date loop** — Replace `new Date(\`${dateStr}T00:00:00\`)` (local time) with `new Date(\`${dateStr}T00:00:00Z\`)` (UTC) in the backfill loop to match how `getTodayPrefix()` already works.
-
----
+**Other pitfalls (full list in PITFALLS.md):** timeline N+1 → single SQL UNION; text paste-bombs → 4000-char cap notes / 20000 journal; sleep edges → stepper 0–14h, NULL excluded from averages, key by wake-date; week boundaries → `weekStartsOn` setting + ISO `week_key` + DST test; mid-entry data loss → drafts table autosave; spurious correlations → hide until N≥14, never display r=, color-blind palette + non-color encoding.
 
 ## Implications for Roadmap
 
-Based on research, the suggested phase structure is driven by two constraints: (1) the bug fixes create data corruption that would be perpetuated by a Drive backup if not fixed first, and (2) the tech debt fixes create the structural foundation (centralized parsing, typed DB results) that makes the Drive feature easier and safer to build.
+### Phase 1: Foundation
+**Rationale:** Mood scale, day-key helper, migration v2, and backup extension are mutually entangled and must land together.
+**Delivers:** `getLocalDayKey()` · `src/config/mood.ts` + `MoodPicker` (refactor `ReflectionModal`) · `migrationV2.ts` (5 tables + indices + `mood_scale_version` column) · `BACKUP_VERSION = 2` + graceful dispatcher + fixture tests · `drafts` table · `tone-of-voice.md`.
+**Avoids:** Pitfalls 1, 2, 3, 4.
 
-### Phase 1: Bug Fixes
+### Phase 2: Capture (Eje A)
+**Rationale:** No visualization without capture data. Captures are the source of every B/C feature.
+**Delivers:** A.1 Morning check-in (UPSERT, draft autosave) · A.3 Evening check-in · A.2 Free-form notes · A.4 Phrases. Backup round-trip per feature.
+**Implements:** 4 repos + 4 services + 4 modals; extends `useEmotionalStore`.
 
-**Rationale:** Data corruption bugs must be fixed before Drive backup, or the first cloud backup will contain malformed data. These are also the highest-risk items — they have been silently affecting user data since the daily assignments feature shipped. No new dependencies required; all changes are in existing service and repository layers.
+### Phase 3: Visualization (Eje B) ‖ parallelizable with Phase 4
+**Rationale:** Pure consumers of capture data; B.1 highest-leverage.
+**Delivers:** B.1 Timeline (day → week) via `emotionalTimelineService` · B.4 Journal notebook · B.2 Stats sub-section in StatsScreen (mood avg + distribution first; sleep↔mood + habits-on-good-days after with N≥14 gate).
 
-**Delivers:** Correct assignment generation, correct backfill behavior, UTC-consistent date arithmetic, category validation at insert boundary.
+### Phase 4: Reflection (Eje C — Weekly Review)
+**Rationale:** Independent of timeline/stats. Per PROJECT.md cut-line, ships first if scope squeezed (architecture supports the pivot).
+**Delivers:** `WeeklyReviewScreen` · auto-summary block · 2-mode UI (Quick/Full) · 3 skippable prompts · idempotent per ISO `week_key` · `weekStartsOn` setting + `src/utils/week.ts` with DST test.
 
-**Addresses:** Bug 2 (spontaneous backfill duplication), Bug 4 (timezone drift), Bug 3 (DRY future-date guard), Bug 5 (unvalidated categories on spontaneous insert)
-
-**Avoids:** Pitfall 1 (backfill duplicates), Pitfall 5 (timezone off-by-one), Pitfall 8 (stats corruption from invalid categories)
-
-**Research flag:** None needed — all bug locations are precisely identified in PITFALLS.md with exact file and line references.
-
-### Phase 2: Tech Debt
-
-**Rationale:** Centralizing JSON parsing (TD-2) enables the Bug 5 fix to use a shared `VALID_AREA_IDS` validator rather than a one-off check. Typing `sanitizeTable` (TD-3) prevents the `as` assertion anti-pattern from propagating into the Drive restore path. Both items reduce the risk surface before adding new complexity.
-
-**Delivers:** Single `parseAndValidateCategories()` entry point, typed `SanitizedHabitRow`/`SanitizedPerformedRow`, typed `SpeechModuleInterface`.
-
-**Addresses:** TD-2 (centralize JSON parsing), TD-3 (type sanitizeTable), TD-1 (useSpeechRecognition type safety)
-
-**Avoids:** Pitfall 7 (type refactoring that hides runtime nulls — use `unknown` + runtime guards, not `as` assertions), Pitfall 10 (scattered JSON parse errors with no context)
-
-**Research flag:** None needed — standard TypeScript refactoring patterns.
-
-### Phase 3: Google Drive Backup
-
-**Rationale:** Drive is built last because it depends on correct data (Phase 1) and clean service boundaries (Phase 2). The architecture is additive: one new service, extensions to an existing store, and promotion of two private helpers to named exports. The OAuth setup must be done before any Drive API code is written.
-
-**Delivers:** Google OAuth sign-in/out, backup upload to `appDataFolder`, backup restore with confirmation modal, last backup timestamp display, sign-in state persistence across restarts.
-
-**Addresses:** All table stakes from FEATURES.md — sign in, upload, download, timestamp, manual trigger, sign out, error messaging, confirmation before restore.
-
-**Uses:** `@react-native-google-signin/google-signin`, `expo-secure-store`, native `fetch` against Drive REST API v3
-
-**Implements:** `driveBackupService.ts`, `useSettingsStore` extensions, `SettingsScreen` Drive section
-
-**Avoids:** Pitfall 2 (silent destructive restore), Pitfall 3 (missing refresh token), Pitfall 4 (wrong Drive scope), Pitfall 6 (partial restore with no context)
-
-**Build order within phase:**
-1. Export `buildBackupData()` and `parseAndValidate()` from `backupService.ts`
-2. Add Google auth fields to `useSettingsStore`
-3. Create `driveBackupService.ts` (signIn, signOut, backupToDrive, restoreFromDrive)
-4. Add Google Sign-In config plugin to `app.json` (parallel with step 3)
-5. Extend `SettingsScreen` with Drive backup UI
-6. EAS development build to test native OAuth flow
-
-**Research flag:** OAuth setup and SHA-1 fingerprint registration are environment-specific steps that require Google Cloud Console access. Confirm client ID type (Web Application, not Android) and scope configuration before writing service code.
+### Phase 5: Notifications
+**Rationale:** Last because deep-link targets must exist.
+**Delivers:** `notificationsService.ts` (single owner) · `app.json` plugin + Android `SCHEDULE_EXACT_ALARM` · Settings UI + native time pickers · channel creation at App.tsx boot · `rescheduleAll()` after `initDatabase()` · foreground reconciliation (TZ change, orphan cleanup) · permission-denied banner. Real-device overnight QA via `build-apk-local`.
+**Uses:** The two new dependencies (`expo-notifications`, `datetimepicker`).
 
 ### Phase Ordering Rationale
-
-- Bug fixes precede Drive because corrupt data backed up to the cloud would be treated as canonical and spread across devices.
-- Tech debt precedes Drive because `buildBackupData()` must become an exported function, and centralizing JSON parsing reduces the chance of the new service introducing a third parsing path.
-- Drive is a clean final phase because both prior phases eliminate the risk factors that would make the integration fragile.
-- Automatic background backup is explicitly deferred — `expo-background-fetch` on iOS is unreliable and the user value is low for an app with manual habits.
+- Foundation must be first — day-key/scale/migration/backup are entangled; partial landing risks silent data loss.
+- Capture before visualization — B.x can't be tested without data; A.4 is independent and can ship as warm-up within Phase 2.
+- Phases 3 and 4 parallelizable across worktrees.
+- Notifications last — deep-link targets must exist; highest platform-edge risk benefits from tight scope.
+- **Cut-line pivot:** Foundation → minimal Capture (A.1) → Reflection → fill in remaining. Architecture supports without rework.
 
 ### Research Flags
 
 Phases needing deeper research during planning:
-- **Phase 3 (OAuth setup):** SHA-1 fingerprint registration for dev and prod environments is environment-specific. Confirm: (a) correct client ID type for `@react-native-google-signin`, (b) `webClientId` vs `androidClientId` configuration, (c) whether existing EAS credentials need to be registered.
+- **Phase 5 (Notifications):** expo-notifications platform edges are MEDIUM-confidence. Verify Android 12+ `SCHEDULE_EXACT_ALARM` flow, channel creation order, TZ-change reconciliation, multi-fire bug (#34782) on real device.
+- **Phase 4 (Weekly Review):** prompt design + 2-mode UI MEDIUM-confidence. UX research pass on Spanish prompt phrasing + tone review before locking copy.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (Bug fixes):** All locations are precisely identified. Fixes are surgical changes to existing query conditions and date constructors.
-- **Phase 2 (Tech debt):** Standard TypeScript refactoring with well-established patterns (`unknown` guards, centralized parse functions).
-
----
+Phases with standard patterns (skip phase research):
+- **Phase 1 (Foundation):** SQLite migration + backup version bump are well-trodden in this codebase (migration v1, backup v0→v1 are direct precedents).
+- **Phase 2 (Capture):** Modal/form/repo/service patterns exist in `ReflectionModal` and habit CRUD.
+- **Phase 3 (Visualization):** chart-kit + StatsScreen are integration points; bucketed-bar approach researched and locked.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All decisions sourced from official Expo docs, official library docs, and a confirmed GitHub issue. One medium-confidence item: exact `@react-native-google-signin` version — verify with `npm info` before install. |
-| Features | HIGH | Bug locations confirmed against actual source files. Cloud backup feature set sourced from first-party PROJECT.md and established habit app patterns. |
-| Architecture | HIGH | Existing architecture is well-understood. Drive integration pattern (new service + shared helpers) follows established layer conventions. |
-| Pitfalls | HIGH | All critical pitfalls are grounded in actual source file line references, confirmed GitHub issues, and official API documentation. |
+| Stack | HIGH | Context7 + `expo/expo@sdk-54` repo + repo grep. Only 2 new deps. |
+| Features | MEDIUM-HIGH | Competitor patterns well-documented; Spanish prompt phrasing needs Phase 4 validation. |
+| Architecture | HIGH | Grounded in `src/`; conventions from `.planning/codebase/`. Schema decisions justified vs alternatives. Mood SoT validated against existing `mood_entries`. |
+| Pitfalls | HIGH for code-level (qu5, idempotency, scale-version, backup, timeline, sleep, week, drafts) — direct codebase precedents; MEDIUM for expo-notifications edges; MEDIUM for UX antipatterns. |
 
-**Overall confidence:** HIGH
+**Overall:** HIGH for proceeding to roadmap.
 
 ### Gaps to Address
-
-- **Google Cloud Console setup:** Client ID types and SHA-1 fingerprint registration are not covered by research (environment-specific). Address during Phase 3 planning — create a setup checklist before writing service code.
-- **EAS build environment:** Whether the existing EAS configuration supports the new config plugin without changes is untested. Validate early in Phase 3 by running a development build before writing Drive API code.
-- **Exact `@react-native-google-signin` version:** Confirm with `npm info @react-native-google-signin/google-signin version` — research indicates ^14.x but did not confirm the exact current version.
-- **Token refresh behavior with `@react-native-google-signin`:** Research indicates the library manages token caching natively via `getTokens()`, but the exact behavior on session expiry (after 30 days) should be tested during implementation.
-
----
+- Notifications platform-edge verification → Phase 5 research + real-device overnight QA via `build-apk-local`.
+- Tone-of-voice in Spanish → Phase 1 deliverable `tone-of-voice.md`; revisit per phase.
+- Weekly review prompt design → Phase 4 UX spike.
+- FTS5 search for journal → decide in REQUIREMENTS phase; if deferred, cap entries < 1k or add in v1.2.
+- Color-blind stats palette → Phase 3 design pass.
+- Soft-delete vs hard-delete → Phase 2 REQUIREMENTS.
 
 ## Sources
 
-### Primary (HIGH confidence)
-- [Expo Google Authentication Guide](https://docs.expo.dev/guides/google-authentication/) — OAuth library selection, scope constraints
-- [React Native Google Sign-In Expo Setup](https://react-native-google-signin.github.io/docs/setting-up/expo) — config plugin, `webClientId` configuration
-- [Google Drive appdata Folder Guide](https://developers.google.com/drive/api/guides/appdata) — scope behavior, API space parameter
-- [Google Drive REST API v3 Reference](https://developers.google.com/workspace/drive/api/reference/rest/v3) — upload, list, download call patterns
-- [expo/expo issue #12793](https://github.com/expo/expo/issues/12793) — confirmed expo-auth-session scope limitation
-- [SQLite atomicity](https://sqlite.org/atomiccommit.html) — transaction rollback behavior
-- Project codebase: `assignmentService.ts`, `assignmentRepository.ts`, `backupService.ts`, `backupRepository.ts`, `db.ts` — bug location and fix scope
+### Primary (HIGH)
+- Context7 `/websites/expo_dev_versions_sdk_notifications`
+- `expo/expo@sdk-54` repo — version pinning
+- `https://docs.expo.dev/versions/v54.0.0/sdk/date-time-picker/`
+- `.planning/codebase/ARCHITECTURE.md`, `STRUCTURE.md`, `CONCERNS.md`, `INTEGRATIONS.md`
+- Repo verification: `src/services/db.ts`, `migrations/migrationV1.ts`, `backupService.ts`, `backupRepository.ts`, `useSettingsStore.ts`, `types/index.ts`, `config/constants.ts`, `ReflectionModal.tsx`
+- `.planning/PROJECT.md`
 
-### Secondary (MEDIUM confidence)
-- [Google Drive in React Native — cmichel.io](https://cmichel.io/google-drive-in-react-native) — fetch-based Drive API pattern
-- [Loop Habit Tracker backup discussions](https://github.com/iSoron/uhabits/discussions/689) — real user expectations for habit app backup features
-- [Expo Google authentication SDK 53 breaking change (Medium, Dec 2025)](https://medium.com/@ruveydakayabasi/fixing-the-broken-google-login-after-expo-sdk-53-7872655e0c49) — SDK 53/54 instability for built-in Google provider
+### Secondary (MEDIUM)
+- MeasuringU, UXPA Journal — scale design
+- Daylio, Stoic, Day One, Diarly, Mudo, Bearable, iMoodJournal, FitRest — competitor patterns
+- Material 3 / Mobbin — FAB best practices
+- Todoist, Ness Labs, Koder.ai — weekly review patterns
+- expo-notifications GH #34782, #10700, #3946; Medium "Making Expo Notifications Actually Work…"
 
-### Tertiary (LOW confidence)
-- [react-native-cloud-storage library](https://react-native-cloud-storage.oss.kuatsu.de/) — evaluated and rejected; low adoption, thin abstraction
-- [Reclaim: Best Habit Tracker Apps 2026](https://reclaim.ai/blog/habit-tracker-apps) — feature landscape context only
+### Tertiary (LOW — needs validation)
+- N=14 correlation threshold — heuristic, no cited study
+- Spanish prompt phrasing — design in Phase 4
 
 ---
-
-*Research completed: 2026-03-17*
+*Research completed: 2026-05-06*
 *Ready for roadmap: yes*
