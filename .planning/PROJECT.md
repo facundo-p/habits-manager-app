@@ -11,8 +11,35 @@ Los datos del usuario deben ser confiables (sin duplicaciones ni pérdida) y est
 ## Current State
 
 **Shipped:** v1.0 Bug Fixes, Tech Debt & Cloud Backup (2026-05-05)
+**In progress:** v1.1 Bienestar emocional
 
 Stack: Expo 54, React Native 0.81, TypeScript 5.9, Zustand 5, expo-sqlite. Architecture: Screen → Store → Service → Repository → SQLite, layered y testeada (95+ tests). Migraciones versionadas via `PRAGMA user_version` con rollback atómico. Google Drive auth code-complete (runtime requiere GCP Console setup).
+
+## Current Milestone: v1.1 Bienestar emocional
+
+**Goal:** Convertir Cozy Habits en herramienta de bienestar integral — capturar señal emocional más allá de los hábitos, visibilizarla en stats y timeline, y habilitar reflexión guiada semanal.
+
+**Target features:**
+
+*Captura:*
+- Check-in matutino: mood + horas de sueño + comentario (Issue #7)
+- Notas sueltas con mood, N por día (Issue #8)
+- Check-in nocturno: mood + comentario de cierre
+- Mis frases de cabecera: texto + autor opcional, consultable (Issue #20)
+
+*Visualización:*
+- Timeline emocional cronológico día/semana
+- Stats de bienestar: mood promedio, distribución, sueño, correlación sueño↔mood, hábitos asociados a días "buenos"
+- Journaling cuaderno: vista navegable día por día con todas las notas
+
+*Reflexión:*
+- Weekly review: cierre de semana con resumen + preguntas de bienestar
+
+**Key context:**
+- Escala de mood unificada entre todas las fuentes (componente compartido)
+- Push notifications con horario configurable para check-ins y weekly review
+- Prioridad de corte: si aprieta, sale Reflexión (Eje C) primero. Captura es base
+- Issues linkeados: #7, #8, #20
 
 ## Requirements
 
@@ -43,7 +70,7 @@ Stack: Expo 54, React Native 0.81, TypeScript 5.9, Zustand 5, expo-sqlite. Archi
 
 ### Active
 
-_Definir requirements de v1.1 vía `/gsd-new-milestone`._
+_Requirements de v1.1 Bienestar emocional se definen en `.planning/REQUIREMENTS.md` durante este milestone._
 
 ### Out of Scope
 
@@ -101,4 +128,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-05 after v1.0 milestone close — 4 phases, 12 plans shipped. Próximo: definir v1.1 vía `/gsd-new-milestone`.*
+*Last updated: 2026-05-06 — v1.1 Bienestar emocional started via `/gsd-new-milestone`. Goal: capturar/visibilizar/reflexionar señal emocional. Issues linkeados: #7, #8, #20.*

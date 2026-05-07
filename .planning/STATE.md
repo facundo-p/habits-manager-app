@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: verifying
-stopped_at: Completed 04-04-PLAN.md (Phase 4 closed)
-last_updated: "2026-05-05T04:47:18.695Z"
-last_activity: 2026-05-05
+milestone: v1.1
+milestone_name: Bienestar emocional
+status: planning
+stopped_at: ""
+last_updated: "2026-05-06T00:00:00.000Z"
+last_activity: 2026-05-06
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-17)
+See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** Los datos del usuario deben ser confiables (sin duplicaciones ni pérdida) y estar protegidos con backup en la nube.
-**Current focus:** Phase 04 — habit-creation-audit
+**Current focus:** v1.1 Bienestar emocional — defining requirements
 
 ## Current Position
 
-Phase: 04
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-05-05 — v1.0 milestone archived (most recent entry overrides 2026-05-04 qu5 quick task)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-06 — Milestone v1.1 started
 
-Progress: [███░░░░░░░] 33%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
