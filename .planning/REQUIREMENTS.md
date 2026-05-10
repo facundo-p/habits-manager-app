@@ -14,8 +14,8 @@
 
 - [ ] **FOUND-01**: La app expone un único helper `getLocalDayKey()` que calcula "hoy" en local timezone, usado por todas las features de bienestar (sin `toISOString().slice(0,10)` disperso)
 - [ ] **FOUND-02**: Existe un componente `<MoodPicker>` compartido entre habit completions y todas las features de v1.1 (escala única en un solo lugar)
-- [ ] **FOUND-03**: La DB migra a v2 atómicamente: agrega tablas `morning_checkins`, `evening_checkins`, `mood_notes`, `quotes`, `weekly_reviews`, `drafts`, índices, y columna `mood_scale_version` en filas con mood
-- [ ] **FOUND-04**: El backup eleva a `BACKUP_VERSION = 2`, serializa las 5 nuevas tablas, y restaura backups v1 tratando arrays nuevos como `[]` (graceful dispatcher)
+- [ ] **FOUND-03**: La DB migra a v2 atómicamente: agrega tablas `mood_log` (kind=morning|evening|note, partial UNIQUE INDEX(kind, date_key) para kinds 1-por-día), `text_library` (kind=quote|future), `weekly_reviews`, `drafts`, índices, y columna `mood_scale_version` en `mood_entries`
+- [ ] **FOUND-04**: El backup eleva a `BACKUP_VERSION = 2`, serializa las 4 nuevas tablas (`mood_log`, `text_library`, `weekly_reviews`; `drafts` queda excluida por transitoria), y restaura backups v1 tratando arrays nuevos como `[]` (graceful dispatcher)
 - [ ] **FOUND-05**: La tabla `drafts` permite autosave de check-ins/notas/review en progreso, con recuperación al reabrir el flow
 
 ### MORN — Check-in matutino (Issue #7)
@@ -120,7 +120,60 @@
 
 ## Traceability
 
-_(rellenado por roadmap — mapping REQ-ID → Phase)_
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| FOUND-01 | Phase 1 — Foundation | Pending |
+| FOUND-02 | Phase 1 — Foundation | Pending |
+| FOUND-03 | Phase 1 — Foundation | Pending |
+| FOUND-04 | Phase 1 — Foundation | Pending |
+| FOUND-05 | Phase 1 — Foundation | Pending |
+| MORN-01 | Phase 2 — Capture | Pending |
+| MORN-02 | Phase 2 — Capture | Pending |
+| MORN-03 | Phase 2 — Capture | Pending |
+| MORN-04 | Phase 2 — Capture | Pending |
+| MORN-05 | Phase 2 — Capture | Pending |
+| EVEN-01 | Phase 2 — Capture | Pending |
+| EVEN-02 | Phase 2 — Capture | Pending |
+| EVEN-03 | Phase 2 — Capture | Pending |
+| EVEN-04 | Phase 2 — Capture | Pending |
+| NOTE-01 | Phase 2 — Capture | Pending |
+| NOTE-02 | Phase 2 — Capture | Pending |
+| NOTE-03 | Phase 2 — Capture | Pending |
+| NOTE-04 | Phase 2 — Capture | Pending |
+| NOTE-05 | Phase 2 — Capture | Pending |
+| PHRA-01 | Phase 2 — Capture | Pending |
+| PHRA-02 | Phase 2 — Capture | Pending |
+| PHRA-03 | Phase 2 — Capture | Pending |
+| PHRA-04 | Phase 2 — Capture | Pending |
+| PHRA-05 | Phase 2 — Capture | Pending |
+| TIME-01 | Phase 3 — Visualization | Pending |
+| TIME-02 | Phase 3 — Visualization | Pending |
+| TIME-03 | Phase 3 — Visualization | Pending |
+| TIME-04 | Phase 3 — Visualization | Pending |
+| STAT-01 | Phase 3 — Visualization | Pending |
+| STAT-02 | Phase 3 — Visualization | Pending |
+| STAT-03 | Phase 3 — Visualization | Pending |
+| STAT-04 | Phase 3 — Visualization | Pending |
+| STAT-05 | Phase 3 — Visualization | Pending |
+| STAT-06 | Phase 3 — Visualization | Pending |
+| JOUR-01 | Phase 3 — Visualization | Pending |
+| JOUR-02 | Phase 3 — Visualization | Pending |
+| JOUR-03 | Phase 3 — Visualization | Pending |
+| JOUR-04 | Phase 3 — Visualization | Pending |
+| REVI-01 | Phase 4 — Reflection | Pending |
+| REVI-02 | Phase 4 — Reflection | Pending |
+| REVI-03 | Phase 4 — Reflection | Pending |
+| REVI-04 | Phase 4 — Reflection | Pending |
+| REVI-05 | Phase 4 — Reflection | Pending |
+| REVI-06 | Phase 4 — Reflection | Pending |
+| NOTIF-01 | Phase 5 — Notifications | Pending |
+| NOTIF-02 | Phase 5 — Notifications | Pending |
+| NOTIF-03 | Phase 5 — Notifications | Pending |
+| NOTIF-04 | Phase 5 — Notifications | Pending |
+| NOTIF-05 | Phase 5 — Notifications | Pending |
+| NOTIF-06 | Phase 5 — Notifications | Pending |
+
+**Coverage:** 50/50 requirements mapped (100%) · 0 orphans · 0 duplicates
 
 ---
-*Last updated: 2026-05-07 — defined for v1.1 Bienestar emocional milestone.*
+*Last updated: 2026-05-07 — Traceability filled in by roadmap. 50 reqs across 5 phases for v1.1 Bienestar emocional milestone.*

@@ -43,85 +43,97 @@ Hard rules (preserved from `.planning/codebase/`):
 
 ---
 
-## 2. Schema Decision — Split Tables, Shared Mood Vocabulary
+## 2. Schema Decision — Partial Unified, Shared Mood Vocabulary
 
-**Decision:** Use **separate tables per kind** (`morning_checkins`, `evening_checkins`, `mood_notes`, `quotes`, `weekly_reviews`). Reject the unified `wellbeing_entries` discriminator table.
+> **2026-05-10 OVERRIDE (user decision):** The original research recommendation was split-tables. After discussion, the decision changed to **partial unification by domain**: one `mood_log` for kinds with shared shape (morning/evening/note), one `text_library` for kinds with shared shape (quote/future "question"), and standalone tables for `weekly_reviews` and `drafts`. Driver: future modular toggles (v1.2) and ability to add similar kinds without migrations. The original split rationale (preserved below) is the explicit context we are overriding.
+>
+> **Final tables for migration v2:** `mood_log`, `text_library`, `weekly_reviews`, `drafts`. Plus `mood_scale_version` column added to existing `mood_entries`.
 
-### Rationale
-
-| Criterion | Split tables (chosen) | Unified `wellbeing_entries` |
-|-----------|----------------------|----------------------------|
-| Schema clarity | Each kind has typed columns (sleep_hours only on morning, quote_author only on quotes) | Sparse table: most columns nullable, semantics by `kind` |
-| Repo convention | Matches existing rule "one repo per table" | Breaks convention; one repo handles N concerns |
-| Migration complexity at v2 | More CREATE TABLE statements, but each is trivial | Fewer tables, but more complex CHECK constraints to enforce per-kind invariants |
-| Constraint enforcement | UNIQUE(date) on morning/evening trivially | Requires partial UNIQUE INDEX on `kind, date` filtered by kind |
-| Read paths | Per-kind reads are simple `SELECT * FROM morning_checkins WHERE date = ?`; timeline aggregator does `UNION ALL` (acceptable: small per-day volume) | Single SELECT but every consumer must filter on `kind` |
-| Future evolution | Adding a column to one kind is local | A new column on one kind further sparsifies the table |
-| Backup serialization | `BackupData` gains 5 fields, each typed | One field of polymorphic objects — type guards must branch on `kind` |
-
-The trade-off favours split: per-kind volume is low (≤2 check-ins/day, handful of notes), so the timeline `UNION ALL` is cheap, and the rest of the codebase already follows one-table-per-domain.
-
-### Concrete Tables (migration v2)
+### Final shape (chosen)
 
 ```sql
--- Morning check-in: 1 per day, idempotent upsert
-CREATE TABLE IF NOT EXISTS morning_checkins (
+-- Unified mood capture (morning, evening, note — extensible)
+CREATE TABLE IF NOT EXISTS mood_log (
   id TEXT PRIMARY KEY,
-  date TEXT NOT NULL UNIQUE,           -- 'YYYY-MM-DD'
-  mood_value REAL NOT NULL,            -- shared mood scale (see §3)
-  sleep_hours REAL,                    -- nullable; 0–24
-  comment TEXT,
-  timestamp TEXT NOT NULL              -- ISO 'YYYY-MM-DD HH:MM:SS'
-);
-
--- Evening check-in: 1 per day
-CREATE TABLE IF NOT EXISTS evening_checkins (
-  id TEXT PRIMARY KEY,
-  date TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL CHECK (kind IN ('morning','evening','note')),
+  date_key TEXT NOT NULL,                  -- 'YYYY-MM-DD' via getLocalDayKey()
+  occurred_at TEXT NOT NULL,               -- full ISO timestamp
   mood_value REAL NOT NULL,
-  comment TEXT,
-  timestamp TEXT NOT NULL
-);
-
--- Free-form mood notes: N per day
-CREATE TABLE IF NOT EXISTS mood_notes (
-  id TEXT PRIMARY KEY,
-  date TEXT NOT NULL,                  -- denormalized YYYY-MM-DD prefix of timestamp; speeds day queries
-  mood_value REAL NOT NULL,
-  text TEXT NOT NULL,
-  timestamp TEXT NOT NULL              -- full ISO; ordering within a day
-);
-CREATE INDEX IF NOT EXISTS idx_mood_notes_date ON mood_notes(date);
-
--- Quotes ("frases de cabecera"): library, no date semantics
-CREATE TABLE IF NOT EXISTS quotes (
-  id TEXT PRIMARY KEY,
-  text TEXT NOT NULL,
-  author TEXT,                         -- nullable
+  mood_scale_version TEXT NOT NULL DEFAULT 'v1',
+  sleep_hours REAL,                        -- only populated when kind='morning'
+  comment TEXT,                            -- free text; for 'note', text body lives here
   created_at TEXT NOT NULL,
-  is_active INTEGER NOT NULL DEFAULT 1 -- soft-delete (mirrors habits.is_active)
+  updated_at TEXT NOT NULL
 );
+-- 1 row per day for check-ins; notes are free
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mood_log_one_per_day
+  ON mood_log(kind, date_key)
+  WHERE kind IN ('morning','evening');
+CREATE INDEX IF NOT EXISTS idx_mood_log_date_key ON mood_log(date_key);
+CREATE INDEX IF NOT EXISTS idx_mood_log_kind ON mood_log(kind);
 
--- Weekly review: 1 per ISO week
+-- Unified text library (quotes; future: questions, mantras, etc.)
+CREATE TABLE IF NOT EXISTS text_library (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('quote')),  -- expand via migration when adding kinds
+  text TEXT NOT NULL,
+  author TEXT,                             -- nullable
+  is_active INTEGER NOT NULL DEFAULT 1,    -- soft-delete (mirrors habits.is_active)
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_text_library_kind_active ON text_library(kind, is_active);
+
+-- Weekly review: 1 per ISO week, snapshot + answers
 CREATE TABLE IF NOT EXISTS weekly_reviews (
   id TEXT PRIMARY KEY,
-  week_start TEXT NOT NULL UNIQUE,     -- Monday 'YYYY-MM-DD' (ISO week start)
-  summary TEXT,                        -- free text
-  answers_json TEXT NOT NULL DEFAULT '{}', -- {questionId: answer}
-  timestamp TEXT NOT NULL
+  week_key TEXT NOT NULL UNIQUE,           -- 'YYYY-Www' ISO
+  week_start TEXT NOT NULL,                -- 'YYYY-MM-DD' Monday or Sunday per setting
+  mood_avg REAL,
+  sleep_avg REAL,
+  top_habits_json TEXT NOT NULL DEFAULT '[]',
+  answers_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
+
+-- Drafts: transient autosave (NOT in backup)
+CREATE TABLE IF NOT EXISTS drafts (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,                      -- 'morning'|'evening'|'note'|'weekly_review'
+  key TEXT NOT NULL,                       -- date_key, week_key, or note_id
+  payload_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_drafts_kind_key ON drafts(kind, key);
+
+-- Existing table gets the scale-version column
+ALTER TABLE mood_entries ADD COLUMN mood_scale_version TEXT NOT NULL DEFAULT 'v1';
 ```
 
-**On `UNIQUE(date)`:** matches one-per-day requirement and makes "upsert today's check-in" a clean `INSERT OR REPLACE` at the repo layer. No deduplication migration needed because these tables are net-new.
+### Why this shape
 
-**On `mood_notes.date`:** stored even though it can be derived from `timestamp`, because the timeline aggregator and the journaling notebook both group by date prefix; the index makes both O(rows-per-day).
+1. **Modular toggles (v1.2 target).** Disable morning, evening, or note independently from `settings.json` — queries naturally return zero rows; no schema gymnastics.
+2. **Future similar kinds = no migration.** Lunch checkin, post-workout mood, mantras, daily questions — expand the CHECK constraint or just remove it. Same code paths.
+3. **Timeline read is cheaper.** Single `SELECT * FROM mood_log WHERE date_key BETWEEN ? AND ?` plus a join into `mood_entries`, instead of UNION over 4 tables.
+4. **Repos/services are thinner.** One `moodLogRepository` with kind-aware methods (`getMorningOf(date)`, `getEveningOf(date)`, `getNotesOf(date)`) — same internals, type-safe surface.
+5. **Schema lies are bounded.** Only `sleep_hours` is sparse (NULL except for kind='morning'). Service layer + TS discriminated union enforce per-kind invariants. Mitigated by repo methods that NEVER expose raw `mood_log` access without a kind filter.
 
-**On `quotes.is_active`:** soft-delete keeps backup/restore stable across app versions and lets users archive without losing history.
+### Trade-offs accepted
+
+- **Validation moves to service layer.** `moodLogService.createMorning({...})` enforces "sleep_hours allowed; date_key unique"; service for `createNote` enforces "no sleep_hours; comment is the text body". Tests cover each kind.
+- **Discriminated union types** in TS instead of separate concrete types. Acceptable cost for the structural payoff.
+- **A single bug in a query that forgets `WHERE kind = ?` could leak data across kinds.** Mitigated by repo design: no raw access; every public function takes or implies a kind.
+- **If a kind diverges hard (e.g., morning gains 10 fields)** we'd split that kind to its own table later — not anticipated for v1.1.
+
+### Original split-tables rationale (overridden 2026-05-10)
+
+The original recommendation favored split tables citing: schema clarity, one-repo-per-table convention, simple per-kind UNIQUE constraints, and avoiding sparse columns. This analysis is preserved here as context. The override applies because (a) per-kind volume is low → cost of UNION is real but small either way, (b) the modular-toggle direction makes unified more natural, and (c) only one column is genuinely sparse (`sleep_hours`).
 
 ### What we are NOT changing
 
-- `mood_entries` (existing, habit-linked) stays as-is. The new mood capture surfaces don't write here.
-- `performed_habits.habit_description` and the existing reflection flow are untouched. They remain the per-habit reflection mechanism.
+- `mood_entries` (existing, habit-linked) stays as-is in its current shape. The new mood capture surfaces write to `mood_log`, not `mood_entries`. The only addition is the `mood_scale_version` column.
+- `performed_habits.habit_description` and the existing reflection flow are untouched.
 
 ---
 
@@ -181,28 +193,38 @@ CREATE TABLE IF NOT EXISTS weekly_reviews (
 
 ## 5. Backup / Restore Extension
 
-**Decision:** Extend `BackupData` with the five new arrays. Bump `BACKUP_VERSION`. Extend `parseAndValidate`, `buildBackupData`, `restoreData`, and `backupRepository.restoreAllData` symmetrically. **No new dedup heuristic required** because the new tables enforce uniqueness via `UNIQUE(date)` (check-ins, weekly_reviews) or have natural-key-free shapes (notes, quotes); a duplicate restore from a malformed backup would fail at `INSERT` and abort the transaction (correct behavior — fail loud, don't silently lose data).
+**Decision:** Extend `BackupData` with three new arrays (`mood_log`, `text_library`, `weekly_reviews`). Bump `BACKUP_VERSION = 2`. Extend `parseAndValidate`, `buildBackupData`, `restoreData`, and `backupRepository.restoreAllData` symmetrically. **No new dedup heuristic required** because uniqueness is enforced via partial `UNIQUE INDEX(kind, date_key)` on `mood_log` and `UNIQUE(week_key)` on `weekly_reviews`; a duplicate restore from a malformed backup fails at `INSERT` and aborts the transaction (fail loud, don't silently lose data). `drafts` is excluded from backup — transient autosave state.
 
 ### Modified types (`src/types/index.ts`)
 
 ```ts
-export interface MorningCheckin { id; date; mood_value; sleep_hours: number | null; comment: string | null; timestamp; }
-export interface EveningCheckin { id; date; mood_value; comment: string | null; timestamp; }
-export interface MoodNote       { id; date; mood_value; text; timestamp; }
-export interface Quote          { id; text; author: string | null; created_at; is_active: number; }
-export interface WeeklyReview   { id; week_start; summary: string | null; answers_json: string; timestamp; }
+// Discriminated union over the unified mood_log table
+export type MoodLogEntry =
+  | { id: string; kind: 'morning'; date_key: string; occurred_at: string; mood_value: number; mood_scale_version: string; sleep_hours: number | null; comment: string | null; created_at: string; updated_at: string }
+  | { id: string; kind: 'evening'; date_key: string; occurred_at: string; mood_value: number; mood_scale_version: string; sleep_hours: null; comment: string | null; created_at: string; updated_at: string }
+  | { id: string; kind: 'note';    date_key: string; occurred_at: string; mood_value: number; mood_scale_version: string; sleep_hours: null; comment: string;        created_at: string; updated_at: string };
+
+// Discriminated union over the unified text_library table
+export type TextLibraryItem =
+  | { id: string; kind: 'quote'; text: string; author: string | null; is_active: number; created_at: string; updated_at: string };
+  // future kinds: 'question', 'mantra', ...
+
+export interface WeeklyReview {
+  id: string; week_key: string; week_start: string;
+  mood_avg: number | null; sleep_avg: number | null;
+  top_habits_json: string; answers_json: string;
+  created_at: string; updated_at: string;
+}
 
 export interface BackupData {
   version: number;                    // bump to 2
   exportedAt: string;
   habits: Habit[];
   performed_habits: PerformedHabit[];
-  mood_entries: MoodEntry[];
+  mood_entries: MoodEntry[];          // gains mood_scale_version field
   daily_assignments: DailyAssignment[];
-  morning_checkins: MorningCheckin[]; // NEW
-  evening_checkins: EveningCheckin[]; // NEW
-  mood_notes: MoodNote[];             // NEW
-  quotes: Quote[];                    // NEW
+  mood_log: MoodLogEntry[];           // NEW (covers morning/evening/note)
+  text_library: TextLibraryItem[];    // NEW (covers quotes; future kinds)
   weekly_reviews: WeeklyReview[];     // NEW
 }
 ```
