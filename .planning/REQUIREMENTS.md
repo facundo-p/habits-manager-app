@@ -14,9 +14,10 @@
 
 - [ ] **FOUND-01**: La app expone un único helper `getLocalDayKey()` que calcula "hoy" en local timezone, usado por todas las features de bienestar (sin `toISOString().slice(0,10)` disperso)
 - [ ] **FOUND-02**: Existe un componente `<MoodPicker>` compartido entre habit completions y todas las features de v1.1 (escala única en un solo lugar)
-- [ ] **FOUND-03**: La DB migra a v2 atómicamente: agrega tablas `mood_log` (kind=morning|evening|note, partial UNIQUE INDEX(kind, date_key) para kinds 1-por-día), `text_library` (kind=quote|future), `weekly_reviews`, `drafts`, índices, y columna `mood_scale_version` en `mood_entries`
-- [ ] **FOUND-04**: El backup eleva a `BACKUP_VERSION = 2`, serializa las 4 nuevas tablas (`mood_log`, `text_library`, `weekly_reviews`; `drafts` queda excluida por transitoria), y restaura backups v1 tratando arrays nuevos como `[]` (graceful dispatcher)
+- [ ] **FOUND-03**: La DB migra a v2 atómicamente: crea `mood_log` (kind=morning|evening|note|reflection, partial UNIQUE INDEX(kind, date_key) para kinds 1-por-día, FK opcional a habits), `text_library` (kind=quote|future), `weekly_reviews`, `drafts`. Migra todos los rows de `mood_entries` a `mood_log` con `kind='reflection'` y elimina `mood_entries`. Todo en una sola transacción con rollback atómico.
+- [ ] **FOUND-04**: El backup eleva a `BACKUP_VERSION = 2`, serializa `mood_log` + `text_library` + `weekly_reviews` (`drafts` excluida). Restaura backups v1 mapeando el array `mood_entries` a `mood_log` con `kind='reflection'` (graceful dispatcher)
 - [ ] **FOUND-05**: La tabla `drafts` permite autosave de check-ins/notas/review en progreso, con recuperación al reabrir el flow
+- [ ] **FOUND-06**: El flow de habit completion + reflection sigue funcionando idéntico desde la perspectiva del usuario (mismo UX, mismos points, misma mood capture); los datos viven en `mood_log` con `kind='reflection'` en lugar de `mood_entries`
 
 ### MORN — Check-in matutino (Issue #7)
 

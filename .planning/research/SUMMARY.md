@@ -52,7 +52,7 @@ Brownfield integration that respects existing layers exactly.
 
 **Key decisions:**
 
-1. **Partial-unified schema (user decision 2026-05-10, overrides original split recommendation).** Four tables: `mood_log` (kind=morning|evening|note, partial UNIQUE INDEX(kind, date_key) for check-ins), `text_library` (kind=quote|future), `weekly_reviews`, `drafts`. Driver: modular toggles (v1.2) + adding similar kinds without migrations. Service-layer validation + TS discriminated unions enforce per-kind invariants.
+1. **Fully-unified mood schema (user decisions 2026-05-10).** Four tables: `mood_log` (kind=morning|evening|note|reflection, partial UNIQUE INDEX(kind, date_key) for check-ins, FK habit_id for reflections), `text_library` (kind=quote|future), `weekly_reviews`, `drafts`. Existing `mood_entries` is **migrated into `mood_log` with kind='reflection' and dropped** in migration v2 (atomic, rollback on failure). Driver: single source of truth for mood, modular toggles (v1.2), no split-brain queries, no future migration of accumulated reflection data.
 2. **Mood SoT, no data migration.** Existing `mood_entries` already uses [1, 10] step 0.5; new tables adopt the same scale. New `src/config/mood.ts` re-exports constants + adds discrete labels. Shared `<MoodPicker>` is the only mood UI; `ReflectionModal` is refactored to use it.
 3. **Single migration v2, atomic.** One `migrationV2.ts` adds all 5 tables + indices in one transaction. `mood_scale_version` column on every mood-bearing row from day 1.
 4. **Single `useEmotionalStore`.** Mirrors `useHabitStore` pattern. Stores never call each other; services compose repositories.

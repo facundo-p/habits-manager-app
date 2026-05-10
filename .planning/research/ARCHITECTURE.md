@@ -52,25 +52,28 @@ Hard rules (preserved from `.planning/codebase/`):
 ### Final shape (chosen)
 
 ```sql
--- Unified mood capture (morning, evening, note — extensible)
+-- Unified mood capture (morning, evening, note, reflection — extensible)
 CREATE TABLE IF NOT EXISTS mood_log (
   id TEXT PRIMARY KEY,
-  kind TEXT NOT NULL CHECK (kind IN ('morning','evening','note')),
+  kind TEXT NOT NULL CHECK (kind IN ('morning','evening','note','reflection')),
   date_key TEXT NOT NULL,                  -- 'YYYY-MM-DD' via getLocalDayKey()
   occurred_at TEXT NOT NULL,               -- full ISO timestamp
   mood_value REAL NOT NULL,
   mood_scale_version TEXT NOT NULL DEFAULT 'v1',
   sleep_hours REAL,                        -- only populated when kind='morning'
-  comment TEXT,                            -- free text; for 'note', text body lives here
+  comment TEXT,                            -- free text; for 'note' = body; for 'reflection' = description
+  habit_id TEXT,                           -- only populated when kind='reflection'; FK to habits
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE SET NULL
 );
--- 1 row per day for check-ins; notes are free
+-- 1 row per day for check-ins; notes and reflections are free
 CREATE UNIQUE INDEX IF NOT EXISTS idx_mood_log_one_per_day
   ON mood_log(kind, date_key)
   WHERE kind IN ('morning','evening');
 CREATE INDEX IF NOT EXISTS idx_mood_log_date_key ON mood_log(date_key);
 CREATE INDEX IF NOT EXISTS idx_mood_log_kind ON mood_log(kind);
+CREATE INDEX IF NOT EXISTS idx_mood_log_habit_id ON mood_log(habit_id) WHERE habit_id IS NOT NULL;
 
 -- Unified text library (quotes; future: questions, mantras, etc.)
 CREATE TABLE IF NOT EXISTS text_library (
@@ -107,9 +110,20 @@ CREATE TABLE IF NOT EXISTS drafts (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_drafts_kind_key ON drafts(kind, key);
 
--- Existing table gets the scale-version column
-ALTER TABLE mood_entries ADD COLUMN mood_scale_version TEXT NOT NULL DEFAULT 'v1';
+-- Migrate existing mood_entries into mood_log as kind='reflection', then drop the table
+INSERT INTO mood_log (
+  id, kind, date_key, occurred_at, mood_value, mood_scale_version,
+  sleep_hours, comment, habit_id, created_at, updated_at
+)
+SELECT
+  id, 'reflection', substr(timestamp, 1, 10), timestamp, value, 'v1',
+  NULL, description, habit_id, timestamp, timestamp
+FROM mood_entries;
+
+DROP TABLE mood_entries;
 ```
+
+**Migration v2 is atomic in `withTransactionAsync`.** All CREATE TABLE + CREATE INDEX + INSERT...SELECT + DROP statements live in a single transaction. If any step fails (e.g., a malformed `timestamp` cannot be parsed for `date_key`), the entire transaction rolls back and `user_version` stays at 1.
 
 ### Why this shape
 
@@ -130,10 +144,19 @@ ALTER TABLE mood_entries ADD COLUMN mood_scale_version TEXT NOT NULL DEFAULT 'v1
 
 The original recommendation favored split tables citing: schema clarity, one-repo-per-table convention, simple per-kind UNIQUE constraints, and avoiding sparse columns. This analysis is preserved here as context. The override applies because (a) per-kind volume is low → cost of UNION is real but small either way, (b) the modular-toggle direction makes unified more natural, and (c) only one column is genuinely sparse (`sleep_hours`).
 
+### Migration impact on existing code
+
+`mood_entries` is **dropped** at migration v2. All existing reflection data is migrated into `mood_log` with `kind='reflection'`. Touched code:
+
+- `src/repositories/moodRepository.ts` — rewrite queries against `mood_log WHERE kind = 'reflection'` (preserve same public API surface so callers don't change).
+- `src/repositories/backupRepository.ts` — replace `SQL_ALL_MOODS`/`SQL_CLEAR_MOODS`/`SQL_INSERT_MOOD` with `mood_log` equivalents scoped to `kind='reflection'` for the reflection path; new functions cover the other kinds.
+- `src/services/backupService.ts` + `src/services/driveBackupService.ts` — `buildBackupData` writes a single `mood_log` array. `parseAndValidate` + `restoreData` accept both v1 (with `mood_entries`) and v2 (with `mood_log`); v1 entries are mapped to reflection rows.
+- Tests touching `mood_entries` (`driveBackupService.restore.test.ts`, `restorePreClean.test.ts`, `testDatabase.ts`) — updated to seed `mood_log` directly or assert the v1→v2 mapping.
+
 ### What we are NOT changing
 
-- `mood_entries` (existing, habit-linked) stays as-is in its current shape. The new mood capture surfaces write to `mood_log`, not `mood_entries`. The only addition is the `mood_scale_version` column.
-- `performed_habits.habit_description` and the existing reflection flow are untouched.
+- `performed_habits` and `daily_assignments` — untouched. The reflection flow still creates a `performed_habits` row + a `mood_log` row with `kind='reflection'` (same as today, just different target table).
+- `habit_id` semantics — still the stable anchor (we did not migrate it to `daily_assignment_id`).
 
 ---
 
@@ -147,9 +170,9 @@ The original recommendation favored split tables citing: schema clarity, one-rep
 - **`src/components/shared/MoodPicker.tsx` (NEW).** Single picker component used by `ReflectionModal` (existing), morning check-in screen, evening check-in screen, mood note modal. Props: `{ value, onChange, size?: 'compact' | 'full' }`.
 - **`src/components/modals/ReflectionModal.tsx` (MODIFIED).** Replace the inline mood UI (currently uses `MOOD_MIN/MAX/STEP` directly per grep) with `<MoodPicker />`.
 
-**Why no migration of existing data:** existing `mood_entries.value` is already in the [1, 10] range with step 0.5. The new tables use the same scale; no conversion. If the team later wants a discrete 5-bucket UX, that's a *presentation* change — `moodLabelFor` is the only thing that needs to evolve, and it works on existing numeric data.
+**Why no scale conversion of existing data:** existing `mood_entries.value` is already in the [1, 10] range with step 0.5. When migrated to `mood_log` as `kind='reflection'`, the values are copied verbatim with `mood_scale_version = 'v1'`. If the team later wants a discrete 5-bucket UX, that's a *presentation* change — `moodLabelFor` is the only thing that needs to evolve, and it works on existing numeric data.
 
-**Risk flagged for PITFALLS.md (cross-doc):** if anyone proposes changing the *numeric* scale (e.g., to 1–5), it becomes a data migration touching `mood_entries`, `morning_checkins`, `evening_checkins`, `mood_notes`. Make this a "do not do without an ADR" rule.
+**Risk flagged for PITFALLS.md (cross-doc):** if anyone proposes changing the *numeric* scale (e.g., to 1–5), it becomes a data migration touching every row in `mood_log` (across all kinds). The `mood_scale_version` column is what enables this safely. Make a "do not do without an ADR" rule.
 
 ---
 
@@ -200,9 +223,10 @@ The original recommendation favored split tables citing: schema clarity, one-rep
 ```ts
 // Discriminated union over the unified mood_log table
 export type MoodLogEntry =
-  | { id: string; kind: 'morning'; date_key: string; occurred_at: string; mood_value: number; mood_scale_version: string; sleep_hours: number | null; comment: string | null; created_at: string; updated_at: string }
-  | { id: string; kind: 'evening'; date_key: string; occurred_at: string; mood_value: number; mood_scale_version: string; sleep_hours: null; comment: string | null; created_at: string; updated_at: string }
-  | { id: string; kind: 'note';    date_key: string; occurred_at: string; mood_value: number; mood_scale_version: string; sleep_hours: null; comment: string;        created_at: string; updated_at: string };
+  | { id: string; kind: 'morning';    date_key: string; occurred_at: string; mood_value: number; mood_scale_version: string; sleep_hours: number | null; comment: string | null; habit_id: null;           created_at: string; updated_at: string }
+  | { id: string; kind: 'evening';    date_key: string; occurred_at: string; mood_value: number; mood_scale_version: string; sleep_hours: null;          comment: string | null; habit_id: null;           created_at: string; updated_at: string }
+  | { id: string; kind: 'note';       date_key: string; occurred_at: string; mood_value: number; mood_scale_version: string; sleep_hours: null;          comment: string;        habit_id: null;           created_at: string; updated_at: string }
+  | { id: string; kind: 'reflection'; date_key: string; occurred_at: string; mood_value: number; mood_scale_version: string; sleep_hours: null;          comment: string | null; habit_id: string | null;  created_at: string; updated_at: string };
 
 // Discriminated union over the unified text_library table
 export type TextLibraryItem =
@@ -221,11 +245,12 @@ export interface BackupData {
   exportedAt: string;
   habits: Habit[];
   performed_habits: PerformedHabit[];
-  mood_entries: MoodEntry[];          // gains mood_scale_version field
   daily_assignments: DailyAssignment[];
-  mood_log: MoodLogEntry[];           // NEW (covers morning/evening/note)
-  text_library: TextLibraryItem[];    // NEW (covers quotes; future kinds)
-  weekly_reviews: WeeklyReview[];     // NEW
+  mood_log: MoodLogEntry[];           // NEW v2 — replaces mood_entries; covers morning/evening/note/reflection
+  text_library: TextLibraryItem[];    // NEW v2
+  weekly_reviews: WeeklyReview[];     // NEW v2
+  // v1 backups also carry: mood_entries: MoodEntry[]
+  // parseAndValidate maps v1 mood_entries → mood_log entries with kind='reflection' on restore
 }
 ```
 

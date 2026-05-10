@@ -21,7 +21,7 @@
 
 ### 🚧 v1.1 Bienestar emocional (Phases 1-5)
 
-- [ ] **Phase 1: Foundation** — Mood scale unification, day-key helper, migration v2 (`mood_log` + `text_library` + `weekly_reviews` + `drafts` + `mood_scale_version` col), backup v2 dispatcher
+- [ ] **Phase 1: Foundation** — Mood scale unification, day-key helper, migration v2 (`mood_log` + `text_library` + `weekly_reviews` + `drafts`; migrate `mood_entries` → `mood_log` kind=reflection, drop old table), backup v2 dispatcher with v1→v2 mapping
 - [ ] **Phase 2: Capture** — Morning check-in, evening check-in, free-form mood notes, frases de cabecera (4 capture surfaces)
 - [ ] **Phase 3: Visualization** — Emotional timeline (day/week), wellbeing stats (mood, sleep, correlations), journaling notebook
 - [ ] **Phase 4: Reflection** — Weekly review with auto-summary + skippable prompts, idempotent per ISO week (cut-line candidate)
@@ -32,14 +32,15 @@
 ### Phase 1: Foundation
 **Goal**: Establish the cross-cutting primitives every wellbeing feature depends on, in a single atomic step
 **Depends on**: Nothing (first phase of v1.1)
-**Requirements**: FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05
+**Requirements**: FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05, FOUND-06
 **Success Criteria** (what must be TRUE):
   1. Every "today" computation in the app uses a single `getLocalDayKey()` helper (no `toISOString().slice(0,10)` in the codebase)
   2. The shared `<MoodPicker>` component is the only mood-input UI (existing `ReflectionModal` refactored to use it; identical scale across all surfaces)
-  3. Database boots at `user_version = 2` with the unified wellbeing tables (`mood_log` with partial `UNIQUE(kind, date_key)`, `text_library`, `weekly_reviews`, `drafts`) + `mood_scale_version` column on `mood_entries`
-  4. A v1 backup imports cleanly into a v1.1 install with new tables empty, and a v2 backup round-trips through Drive and local export with `BACKUP_VERSION = 2`
-  5. An in-progress check-in/note/review survives an app kill and is restored as a draft on reopen
-**Plans**: TBD
+  3. Database boots at `user_version = 2` with the unified `mood_log` (partial `UNIQUE(kind, date_key)` for morning/evening; FK to habits for kind='reflection') + `text_library` + `weekly_reviews` + `drafts`. All historic `mood_entries` rows are migrated into `mood_log` as `kind='reflection'` and the old table is dropped — atomically in a single transaction with rollback on failure
+  4. The existing habit reflection flow continues working identically from a user POV (same UX, same points, same mood capture) with data writing to `mood_log` instead of `mood_entries`
+  5. A v1 backup imports cleanly into a v1.1 install — the v1 `mood_entries` array is mapped to `mood_log` rows with `kind='reflection'`; a v2 backup round-trips through Drive and local export with `BACKUP_VERSION = 2`
+  6. An in-progress check-in/note/review survives an app kill and is restored as a draft on reopen
+**Plans**: TBD (estimate 4)
 
 ### Phase 2: Capture
 **Goal**: Users can record all four wellbeing data sources reliably, idempotently, and without losing in-progress text
@@ -101,7 +102,7 @@
 | 2. Tech Debt | v1.0 | 3/3 | Complete | 2026-05-05 |
 | 3. Google Drive Backup | v1.0 | 3/3 | Complete | 2026-05-05 |
 | 4. Habit Creation Audit & Duplicate Cleanup | v1.0 | 4/4 | Complete | 2026-05-05 |
-| 1. Foundation | v1.1 | 0/3 | Not started | - |
+| 1. Foundation | v1.1 | 0/4 | Not started | - |
 | 2. Capture | v1.1 | 0/4 | Not started | - |
 | 3. Visualization | v1.1 | 0/3 | Not started | - |
 | 4. Reflection | v1.1 | 0/2 | Not started | - |
