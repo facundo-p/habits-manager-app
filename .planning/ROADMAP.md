@@ -40,7 +40,15 @@
   4. The existing habit reflection flow continues working identically from a user POV (same UX, same points, same mood capture) with data writing to `mood_log` instead of `mood_entries`
   5. A v1 backup imports cleanly into a v1.1 install — the v1 `mood_entries` array is mapped to `mood_log` rows with `kind='reflection'`; a v2 backup round-trips through Drive and local export with `BACKUP_VERSION = 2`
   6. An in-progress check-in/note/review survives an app kill and is restored as a draft on reopen
-**Plans**: TBD (estimate 4)
+**Plans**: 8 plans
+  - [ ] 01-01-PLAN.md — Wave 0: test infrastructure + UAT scaffold
+  - [ ] 01-02-PLAN.md — Wave 1: date helpers codemod (D-01)
+  - [ ] 01-03-PLAN.md — Wave 2: config/mood.ts + MoodPicker + ReflectionModal refactor (D-02/D-03)
+  - [ ] 01-04-PLAN.md — Wave 3: migration v2 + pre-v2 snapshot + backup v1->v2 (FOUND-03/04, D-06)
+  - [ ] 01-05-PLAN.md — Wave 4: drafts repo + useDraftAutosave hook + boot purge (FOUND-05, D-04)
+  - [ ] 01-06-PLAN.md — Wave 5: error screen + bootSequence extraction (D-05)
+  - [ ] 01-07-PLAN.md — Wave 6: tone-of-voice.md (D-07, parallel)
+  - [ ] 01-08-PLAN.md — Wave 7: docs update + UAT execution + VERIFICATION.md
 
 ### Phase 2: Capture
 **Goal**: Users can record all four wellbeing data sources reliably, idempotently, and without losing in-progress text
@@ -102,7 +110,7 @@
 | 2. Tech Debt | v1.0 | 3/3 | Complete | 2026-05-05 |
 | 3. Google Drive Backup | v1.0 | 3/3 | Complete | 2026-05-05 |
 | 4. Habit Creation Audit & Duplicate Cleanup | v1.0 | 4/4 | Complete | 2026-05-05 |
-| 1. Foundation | v1.1 | 0/4 | Not started | - |
+| 1. Foundation | v1.1 | 0/8 | Plans created | - |
 | 2. Capture | v1.1 | 0/4 | Not started | - |
 | 3. Visualization | v1.1 | 0/3 | Not started | - |
 | 4. Reflection | v1.1 | 0/2 | Not started | - |
