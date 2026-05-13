@@ -15,16 +15,16 @@ import {
 import * as constants from '../config/constants';
 
 describe('moodLabelFor', () => {
-  it('returns "muyMal" at MOOD_MIN', () => {
-    expect(moodLabelFor(MOOD_MIN)).toBe('muyMal');
+  it('returns "VERY_BAD" at MOOD_MIN', () => {
+    expect(moodLabelFor(MOOD_MIN)).toBe('VERY_BAD');
   });
 
-  it('returns "muyBien" at MOOD_MAX', () => {
-    expect(moodLabelFor(MOOD_MAX)).toBe('muyBien');
+  it('returns "VERY_GOOD" at MOOD_MAX', () => {
+    expect(moodLabelFor(MOOD_MAX)).toBe('VERY_GOOD');
   });
 
-  it('returns "neutral" for mid-range value 5.5', () => {
-    expect(moodLabelFor(5.5)).toBe('neutral');
+  it('returns "NEUTRAL" for mid-range value 5.5', () => {
+    expect(moodLabelFor(5.5)).toBe('NEUTRAL');
   });
 });
 
@@ -33,9 +33,9 @@ describe('mood module surface', () => {
     expect(MOOD_SCALE_VERSION).toBe('v1');
   });
 
-  it('MOOD_LABELS has 5 entries (muyMal..muyBien)', () => {
+  it('MOOD_LABELS has 5 entries (VERY_BAD..VERY_GOOD)', () => {
     expect(MOOD_LABELS).toHaveLength(5);
-    expect(MOOD_LABELS).toEqual(['muyMal', 'mal', 'neutral', 'bien', 'muyBien']);
+    expect(MOOD_LABELS).toEqual(['VERY_BAD', 'BAD', 'NEUTRAL', 'GOOD', 'VERY_GOOD']);
   });
 
   it('re-exports MOOD_MIN/MAX/STEP/DEFAULT_VALUE identical to constants.ts', () => {
