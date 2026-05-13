@@ -12,6 +12,7 @@
 
 import Database from 'better-sqlite3';
 import { setMockDatabase, clearMockDatabase } from '../../../__mocks__/expo-sqlite';
+import type { MoodEntry } from '../../types';
 
 // ─── Schema (espejo exacto de db.ts) ────────────────────────────────────────
 
@@ -69,6 +70,93 @@ const SQL_UNIQUE_INDEX = `
   CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_habit_date
   ON daily_assignments(habit_id, date)
   WHERE habit_id IS NOT NULL
+`;
+
+// ─── Schema v2 (espejo de research/ARCHITECTURE.md §2) ──────────────────────
+// Estas constantes serán importadas por src/db/migrations/migrationV2.ts (Wave 3)
+// como single source of truth — ver T-01-01 en 01-01-PLAN.md threat model.
+
+export const SQL_CREATE_MOOD_LOG_V2 = `
+  CREATE TABLE IF NOT EXISTS mood_log (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL CHECK (kind IN ('morning','evening','note','reflection')),
+    date_key TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    mood_value REAL NOT NULL,
+    mood_scale_version TEXT NOT NULL DEFAULT 'v1',
+    sleep_hours REAL,
+    comment TEXT,
+    habit_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE SET NULL
+  )
+`;
+
+export const SQL_CREATE_TEXT_LIBRARY_V2 = `
+  CREATE TABLE IF NOT EXISTS text_library (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL CHECK (kind IN ('quote')),
+    text TEXT NOT NULL,
+    author TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )
+`;
+
+export const SQL_CREATE_WEEKLY_REVIEWS_V2 = `
+  CREATE TABLE IF NOT EXISTS weekly_reviews (
+    id TEXT PRIMARY KEY,
+    week_key TEXT NOT NULL UNIQUE,
+    week_start TEXT NOT NULL,
+    mood_avg REAL,
+    sleep_avg REAL,
+    top_habits_json TEXT NOT NULL DEFAULT '[]',
+    answers_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )
+`;
+
+export const SQL_CREATE_DRAFTS_V2 = `
+  CREATE TABLE IF NOT EXISTS drafts (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    key TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )
+`;
+
+export const SQL_INDEX_MOOD_LOG_ONE_PER_DAY = `
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_mood_log_one_per_day
+  ON mood_log(kind, date_key)
+  WHERE kind IN ('morning','evening')
+`;
+
+export const SQL_INDEX_MOOD_LOG_DATE_KEY = `
+  CREATE INDEX IF NOT EXISTS idx_mood_log_date_key ON mood_log(date_key)
+`;
+
+export const SQL_INDEX_MOOD_LOG_KIND = `
+  CREATE INDEX IF NOT EXISTS idx_mood_log_kind ON mood_log(kind)
+`;
+
+export const SQL_INDEX_MOOD_LOG_HABIT_ID = `
+  CREATE INDEX IF NOT EXISTS idx_mood_log_habit_id
+  ON mood_log(habit_id)
+  WHERE habit_id IS NOT NULL
+`;
+
+export const SQL_INDEX_TEXT_LIBRARY_KIND_ACTIVE = `
+  CREATE INDEX IF NOT EXISTS idx_text_library_kind_active
+  ON text_library(kind, is_active)
+`;
+
+export const SQL_INDEX_DRAFTS_KIND_KEY = `
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_drafts_kind_key
+  ON drafts(kind, key)
 `;
 
 // ─── API pública ─────────────────────────────────────────────────────────────
@@ -249,4 +337,76 @@ export function seedDuplicates(
     });
   }
   return ids;
+}
+
+// ─── Variante pre-migración v2 ───────────────────────────────────────────────
+//
+// FOUND-03/04 (Wave 3): los tests de migrationV2 necesitan una DB que represente
+// el estado post-migrationV1 (user_version=1 + UNIQUE INDEX) con la tabla legacy
+// `mood_entries` poblable para validar la migración a `mood_log`.
+
+export interface PreMigrationV2Opts {
+  /** Filas a sembrar en mood_entries antes de correr migrationV2. */
+  moodEntries?: MoodEntry[];
+}
+
+function seedMoodEntries(db: Database.Database, rows: MoodEntry[]): void {
+  const stmt = db.prepare(`
+    INSERT INTO mood_entries (id, value, description, timestamp, habit_id)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  for (const r of rows) {
+    stmt.run(r.id, r.value, r.description, r.timestamp, r.habit_id);
+  }
+}
+
+export async function createPreMigrationV2TestDatabase(
+  opts: PreMigrationV2Opts = {},
+): Promise<Database.Database> {
+  _db = new Database(':memory:');
+  _db.pragma('foreign_keys = ON');
+  _db.exec(SQL_CREATE_HABITS);
+  _db.exec(SQL_CREATE_PERFORMED);
+  _db.exec(SQL_CREATE_MOODS);
+  _db.exec(SQL_CREATE_ASSIGNMENTS);
+  _db.exec(SQL_UNIQUE_INDEX);
+  _db.pragma('user_version = 1');
+  if (opts.moodEntries?.length) seedMoodEntries(_db, opts.moodEntries);
+  setMockDatabase(_db);
+  return _db;
+}
+
+// ─── Variante post-migración v2 ──────────────────────────────────────────────
+//
+// Schema final de v2: habits + performed_habits + daily_assignments (pre-v2 sin
+// mood_entries) + mood_log + text_library + weekly_reviews + drafts.
+
+function createV2Tables(db: Database.Database): void {
+  db.exec(SQL_CREATE_HABITS);
+  db.exec(SQL_CREATE_PERFORMED);
+  db.exec(SQL_CREATE_ASSIGNMENTS);
+  db.exec(SQL_CREATE_MOOD_LOG_V2);
+  db.exec(SQL_CREATE_TEXT_LIBRARY_V2);
+  db.exec(SQL_CREATE_WEEKLY_REVIEWS_V2);
+  db.exec(SQL_CREATE_DRAFTS_V2);
+}
+
+function createV2Indexes(db: Database.Database): void {
+  db.exec(SQL_UNIQUE_INDEX);
+  db.exec(SQL_INDEX_MOOD_LOG_ONE_PER_DAY);
+  db.exec(SQL_INDEX_MOOD_LOG_DATE_KEY);
+  db.exec(SQL_INDEX_MOOD_LOG_KIND);
+  db.exec(SQL_INDEX_MOOD_LOG_HABIT_ID);
+  db.exec(SQL_INDEX_TEXT_LIBRARY_KIND_ACTIVE);
+  db.exec(SQL_INDEX_DRAFTS_KIND_KEY);
+}
+
+export async function createPostMigrationV2TestDatabase(): Promise<Database.Database> {
+  _db = new Database(':memory:');
+  _db.pragma('foreign_keys = ON');
+  createV2Tables(_db);
+  createV2Indexes(_db);
+  _db.pragma('user_version = 2');
+  setMockDatabase(_db);
+  return _db;
 }
