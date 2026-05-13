@@ -9,7 +9,6 @@
  */
 
 import { parseAndValidateCategories } from '../utils/parsing';
-import { dateToPrefix } from '../utils/dateHelpers';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
 import * as assignmentRepo from '../repositories/assignmentRepository';
@@ -20,6 +19,14 @@ import type { DaySummaryHabit, CategoryPoints, WeeklyComparison } from '../types
 
 function buildMonthPrefix(month: number, year: number): string {
   return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+/** Extracts YYYY-MM-DD from a Date using LOCAL time methods (not UTC). */
+function localDateToPrefix(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function getWeekBounds(weeksAgo: number): { start: string; end: string } {
@@ -34,7 +41,7 @@ function getWeekBounds(weeksAgo: number): { start: string; end: string } {
   const nextMonday = new Date(monday);
   nextMonday.setDate(monday.getDate() + 7);
 
-  return { start: dateToPrefix(monday), end: dateToPrefix(nextMonday) };
+  return { start: localDateToPrefix(monday), end: localDateToPrefix(nextMonday) };
 }
 
 
