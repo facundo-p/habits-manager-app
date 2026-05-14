@@ -8,12 +8,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
-import Slider from '@react-native-community/slider';
-import { MOOD_MIN, MOOD_MAX, MOOD_STEP, MOOD_DEFAULT_VALUE } from '../../config/constants';
+import { MOOD_DEFAULT_VALUE } from '../../config/mood';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 import { BottomSheet } from '../layout/BottomSheet';
 import { MicButton } from '../shared/MicButton';
-import { styles, sliderColors, nativeStyles } from './ReflectionModal.styles';
+import { MoodPicker } from '../shared/MoodPicker';
+import { styles } from './ReflectionModal.styles';
 
 interface ReflectionModalProps {
   visible: boolean;
@@ -44,7 +44,7 @@ export function ReflectionModal({
   return (
     <BottomSheet visible={visible} onClose={onSkip}>
       <ModalHeader habitName={habitName} />
-      <MoodSection value={moodValue} onValueChange={setMoodValue} />
+      <MoodPicker value={moodValue} onChange={setMoodValue} />
       <DescriptionWithMic value={description} onChangeText={setDescription} />
       <ModalActions onSave={handleSave} onSkip={onSkip} />
     </BottomSheet>
@@ -58,33 +58,6 @@ function ModalHeader({ habitName }: { habitName: string }) {
     <>
       <Text className={styles.title}>Reflexión</Text>
       <Text className={styles.habitName}>{habitName}</Text>
-      <View className={styles.sectionGap} />
-    </>
-  );
-}
-
-function MoodSection({
-  value, onValueChange,
-}: {
-  value: number; onValueChange: (v: number) => void;
-}) {
-  return (
-    <>
-      <Text className={styles.label}>¿Cómo te sientes?</Text>
-      <Text className={styles.moodValue}>{value.toFixed(1)}</Text>
-      <View className={styles.sliderWrapper}>
-        <Slider
-          style={nativeStyles.slider}
-          minimumValue={MOOD_MIN}
-          maximumValue={MOOD_MAX}
-          step={MOOD_STEP}
-          value={value}
-          onValueChange={onValueChange}
-          minimumTrackTintColor={sliderColors.minimumTrack}
-          maximumTrackTintColor={sliderColors.maximumTrack}
-          thumbTintColor={sliderColors.thumb}
-        />
-      </View>
       <View className={styles.sectionGap} />
     </>
   );
