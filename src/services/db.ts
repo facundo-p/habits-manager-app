@@ -26,30 +26,6 @@ export function generateId(): string {
   return Crypto.randomUUID();
 }
 
-// ─── Date helpers (compartidos entre services) ──────────────────────
-
-export function getTodayPrefix(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-export function isFutureDate(datePrefix: string): boolean {
-  return datePrefix > getTodayPrefix();
-}
-
-export function getNowTimestamp(): string {
-  return new Date().toISOString().replace('T', ' ').slice(0, 19);
-}
-
-/** Timestamp para una fecha específica (usa hora actual). */
-export function getTimestampForDate(datePrefix: string): string {
-  const time = new Date().toISOString().slice(11, 19);
-  return `${datePrefix} ${time}`;
-}
-
 // ─── Inicialización ─────────────────────────────────────────────────
 
 const SQL_ENABLE_WAL = 'PRAGMA journal_mode = WAL';

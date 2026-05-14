@@ -21,7 +21,7 @@ import {
 // El mock de expo-sqlite (singleton MockSQLiteDatabase) se inyecta automáticamente
 // por testDatabase.ts en createTestDatabase(). Importamos las funciones después
 // de declarar cualquier mock global (no hay que mockear ../services/db acá:
-// las funciones reciben la db por parámetro y no usan getTodayPrefix).
+// las funciones reciben la db por parámetro y no usan getLocalDayKey).
 
 import {
   sanitizeHabitDefaultCategories,

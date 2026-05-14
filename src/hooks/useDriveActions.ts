@@ -8,7 +8,7 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as drive from '../services/driveBackupService';
-import { getTodayPrefix } from '../services/db';
+import { getLocalDayKey } from '../utils/date';
 import {
   ALERT_DRIVE_SIGN_OUT,
   ALERT_DRIVE_OVERWRITE_TODAY,
@@ -80,7 +80,7 @@ export function useDriveActions({
     // D-13: confirmar overwrite si ya hay backup de hoy ANTES de subir.
     try {
       const backups = await drive.listBackups();
-      const today = getTodayPrefix();
+      const today = getLocalDayKey();
       const hasToday = backups.some((b) => b.name.includes(today));
       if (hasToday) {
         const fechaHoy = formatDateEs(new Date());
