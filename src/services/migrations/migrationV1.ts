@@ -21,12 +21,16 @@ import {
   SQL_ASSERT_NO_DUPLICATES,
   SQL_CREATE_UNIQUE_INDEX,
 } from '../../repositories/assignmentRepository';
+import { migrationV2_addWellbeingTables } from './migrationV2';
 
 const TARGET_VERSION = 1;
 
 /**
  * Punto de entrada del sistema de migraciones versionadas.
  * Lee PRAGMA user_version y dispatcha a las migraciones pendientes en orden.
+ *
+ * Nota A4 (research §1): v1 falla en silencio (D-06 v1.0); v2 re-throws para
+ * que App.tsx muestre MigrationErrorScreen (D-05 v1.1).
  */
 export async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   const result = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
@@ -35,7 +39,9 @@ export async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   if (current < 1) {
     await migrationV1_dedupeAndIndex(db);
   }
-  // Nota: cuando se agregue v2, agregar aquí: if (current < 2) await migrationV2_*(db)
+  if (current < 2) {
+    await migrationV2_addWellbeingTables(db);
+  }
 }
 
 /**

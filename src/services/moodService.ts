@@ -1,40 +1,54 @@
 /**
- * moodService.ts — Lógica de negocio para registros de humor.
+ * moodService.ts — Lógica de negocio para reflections del habit completion flow.
  *
- * Delega el acceso a datos a moodRepository.
- * Se encarga de: resolución de fechas y generación de timestamps.
+ * Post-migration v2: escribe a `mood_log` con `kind='reflection'`. La API
+ * pública preserva el shape legacy (firmas idénticas) para no romper callers
+ * (ReflectionModal, etc.). El mapping legacy → mood_log queda contained acá.
  *
- * Las firmas públicas NO cambian (contrato con el Store).
+ * Phase 2 añadirá moodService surfaces para morning/evening/note (otros kinds
+ * de mood_log).
  */
 
+import { MOOD_SCALE_VERSION } from '../config/mood';
 import { getLocalDayKey, getNowTimestamp, getTimestampForDate } from '../utils/date';
-import * as moodRepo from '../repositories/moodRepository';
+import * as moodLogRepo from '../repositories/moodLogRepository';
 
-/** Crea un registro de humor vinculado opcionalmente a un hábito. */
+/** Crea una reflection (habit completion flow). Compatible con la firma v1. */
 export async function createMoodEntry(
   value: number,
   description: string | null,
   habitId: string | null,
   datePrefix?: string,
 ): Promise<void> {
-  const ts = datePrefix ? getTimestampForDate(datePrefix) : getNowTimestamp();
-  return moodRepo.insert(value, description, ts, habitId);
+  const dateKey = datePrefix ?? getLocalDayKey();
+  const occurredAt = datePrefix ? getTimestampForDate(datePrefix) : getNowTimestamp();
+  await moodLogRepo.insert({
+    kind: 'reflection',
+    date_key: dateKey,
+    occurred_at: occurredAt,
+    mood_value: value,
+    mood_scale_version: MOOD_SCALE_VERSION,
+    comment: description,
+    habit_id: habitId,
+    created_at: occurredAt,
+    updated_at: occurredAt,
+  });
 }
 
-/** Obtiene el mood_value para un hábito en una fecha (default: hoy). */
+/** Mood value de la reflection más reciente de un hábito en una fecha. */
 export async function getMoodForHabit(
   habitId: string,
   datePrefix?: string,
 ): Promise<number | null> {
-  const day = datePrefix ?? getLocalDayKey();
-  return moodRepo.findValueByHabitAndDate(habitId, day);
+  const dateKey = datePrefix ?? getLocalDayKey();
+  return moodLogRepo.findReflectionValueByHabitAndDate(habitId, dateKey);
 }
 
-/** Elimina registros de mood para un hábito en una fecha (default: hoy). */
+/** Elimina reflections de un hábito en una fecha (por unmark del habit). */
 export async function deleteMoodForHabit(
   habitId: string,
   datePrefix?: string,
 ): Promise<void> {
-  const day = datePrefix ?? getLocalDayKey();
-  return moodRepo.deleteByHabitAndDate(habitId, day);
+  const dateKey = datePrefix ?? getLocalDayKey();
+  return moodLogRepo.deleteReflectionByHabitAndDate(habitId, dateKey);
 }

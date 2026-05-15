@@ -155,7 +155,7 @@ export function RestoreFromDriveScreen() {
         `Vas a restaurar el backup del ${fechaLabel} (` +
         `${payload.counts.habits} hábitos, ` +
         `${payload.counts.performed_habits} completados, ` +
-        `${payload.counts.mood_entries} moods, ` +
+        `${payload.counts.mood} moods, ` +
         `${payload.counts.daily_assignments} assignments).\n\n` +
         `Esto reemplazará todos tus datos actuales. Esta acción no se puede deshacer.`;
       Alert.alert(

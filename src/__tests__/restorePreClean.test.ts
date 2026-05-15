@@ -55,8 +55,11 @@ function makeBackup(over: Partial<BackupData> = {}): BackupData {
       },
     ],
     performed_habits: [],
-    mood_entries: [],
     daily_assignments: [],
+    mood_log: [],
+    text_library: [],
+    weekly_reviews: [],
+    mood_entries: [],
     ...over,
   };
 }

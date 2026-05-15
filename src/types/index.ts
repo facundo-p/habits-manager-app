@@ -148,13 +148,69 @@ export type RootTabParamList = {
   Progreso: undefined;
 };
 
+// ─── Wellbeing tables (post-migration v2) ───────────────────────────
+
+export interface MoodLogEntry {
+  id: string;
+  kind: 'morning' | 'evening' | 'note' | 'reflection';
+  date_key: string; // YYYY-MM-DD
+  occurred_at: string; // ISO 8601
+  mood_value: number; // 1.0–10.0, step 0.5
+  mood_scale_version: string; // 'v1' por ahora
+  sleep_hours: number | null;
+  comment: string | null;
+  habit_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TextLibraryItem {
+  id: string;
+  kind: 'quote';
+  text: string;
+  author: string | null;
+  is_active: number; // 0 | 1
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WeeklyReview {
+  id: string;
+  week_key: string; // YYYY-Www
+  week_start: string; // YYYY-MM-DD
+  mood_avg: number | null;
+  sleep_avg: number | null;
+  top_habits_json: string; // JSON array
+  answers_json: string; // JSON object
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Backup ─────────────────────────────────────────────────────────
 
+/**
+ * BackupData shape v2 — current schema.
+ * `mood_entries` permanece opcional para que `parseAndValidate` pueda exponer
+ * un v1 normalizado al dispatcher sin perder type-safety en el path v2.
+ */
 export interface BackupData {
   version: number;
   exportedAt: string;
   habits: Habit[];
   performed_habits: PerformedHabit[];
-  mood_entries: MoodEntry[];
   daily_assignments: DailyAssignment[];
+  mood_log: MoodLogEntry[];
+  text_library: TextLibraryItem[];
+  weekly_reviews: WeeklyReview[];
+  mood_entries?: MoodEntry[]; // solo presente cuando version === 1
+}
+
+/** Shape exclusiva v1 — usada por `buildV1Snapshot` (pre-v2 snapshot D-06). */
+export interface BackupDataV1 {
+  version: 1;
+  exportedAt: string;
+  habits: Habit[];
+  performed_habits: PerformedHabit[];
+  daily_assignments: DailyAssignment[];
+  mood_entries: MoodEntry[];
 }

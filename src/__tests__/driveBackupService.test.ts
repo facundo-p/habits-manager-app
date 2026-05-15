@@ -30,12 +30,14 @@ jest.doMock(
 // Mock backupService para no tocar DB en estos tests
 jest.doMock('../services/backupService', () => ({
   buildBackupData: jest.fn().mockResolvedValue({
-    version: 1,
+    version: 2,
     exportedAt: '2026-04-27T00:00:00Z',
     habits: [],
     performed_habits: [],
-    mood_entries: [],
     daily_assignments: [],
+    mood_log: [],
+    text_library: [],
+    weekly_reviews: [],
   }),
   parseAndValidate: jest.fn(),
   restoreData: jest.fn(),
