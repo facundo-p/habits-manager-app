@@ -7,7 +7,7 @@
  * Las firmas públicas NO cambian (contrato con el Store).
  */
 
-import { getTodayPrefix, getNowTimestamp, getTimestampForDate } from './db';
+import { getLocalDayKey, getNowTimestamp, getTimestampForDate } from '../utils/date';
 import * as moodRepo from '../repositories/moodRepository';
 
 /** Crea un registro de humor vinculado opcionalmente a un hábito. */
@@ -26,7 +26,7 @@ export async function getMoodForHabit(
   habitId: string,
   datePrefix?: string,
 ): Promise<number | null> {
-  const day = datePrefix ?? getTodayPrefix();
+  const day = datePrefix ?? getLocalDayKey();
   return moodRepo.findValueByHabitAndDate(habitId, day);
 }
 
@@ -35,6 +35,6 @@ export async function deleteMoodForHabit(
   habitId: string,
   datePrefix?: string,
 ): Promise<void> {
-  const day = datePrefix ?? getTodayPrefix();
+  const day = datePrefix ?? getLocalDayKey();
   return moodRepo.deleteByHabitAndDate(habitId, day);
 }

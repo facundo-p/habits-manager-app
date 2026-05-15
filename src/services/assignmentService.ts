@@ -7,8 +7,7 @@
  * Delega acceso a datos a los repositorios.
  */
 
-import { getTodayPrefix, getTimestampForDate, getNowTimestamp, isFutureDate } from './db';
-import { dateToPrefix } from '../utils/dateHelpers';
+import { getLocalDayKey, getTimestampForDate, getNowTimestamp, isFutureDate, nextDay, formatDateStr } from '../utils/date';
 import * as assignmentRepo from '../repositories/assignmentRepository';
 import * as habitRepo from '../repositories/habitRepository';
 import * as taskRepo from '../repositories/taskRepository';
@@ -23,7 +22,7 @@ import { type Frequency } from '../utils/periodHelpers';
 export async function getItemsForDate(
   datePrefix?: string,
 ): Promise<DailyItem[]> {
-  const day = datePrefix ?? getTodayPrefix();
+  const day = datePrefix ?? getLocalDayKey();
   await ensureAssignmentsForDate(day);
 
   const [assignments, performed] = await Promise.all([
@@ -80,7 +79,7 @@ function uniqueHabitIdsByFrequency(
 export async function getPointsForDate(
   datePrefix?: string,
 ): Promise<DailyStats> {
-  const day = datePrefix ?? getTodayPrefix();
+  const day = datePrefix ?? getLocalDayKey();
   await ensureAssignmentsForDate(day);
 
   const [total, earned] = await Promise.all([
@@ -98,7 +97,7 @@ export async function completeAssignment(
   item: DailyItem,
   datePrefix?: string,
 ): Promise<string | null> {
-  const day = datePrefix ?? getTodayPrefix();
+  const day = datePrefix ?? getLocalDayKey();
 
   // weekly/monthly propagan completion a todas las rows del período.
   if (item.habitId !== null && (item.frequency === 'weekly' || item.frequency === 'monthly')) {
@@ -125,7 +124,7 @@ export async function uncompleteAssignment(
   item: DailyItem,
   datePrefix?: string,
 ): Promise<void> {
-  const day = datePrefix ?? getTodayPrefix();
+  const day = datePrefix ?? getLocalDayKey();
 
   // revertir propagación si el hábito es weekly/monthly.
   if (item.habitId !== null && (item.frequency === 'weekly' || item.frequency === 'monthly')) {
@@ -148,7 +147,7 @@ export async function addSpontaneous(
   datePrefix?: string,
 ): Promise<void> {
   assertValidCategories(categories, 'addSpontaneous');
-  const day = datePrefix ?? getTodayPrefix();
+  const day = datePrefix ?? getLocalDayKey();
   await assignmentRepo.insert(
     null, day, name, 0,
     JSON.stringify(categories), 'daily', 1, 1,
@@ -173,7 +172,7 @@ export async function addAssignmentForHabit(
   habitId: string,
   datePrefix?: string,
 ): Promise<void> {
-  const day = datePrefix ?? getTodayPrefix();
+  const day = datePrefix ?? getLocalDayKey();
   if (isFutureDate(day)) return;
   const existing = await assignmentRepo.findByHabitAndDate(habitId, day);
   if (existing) return;
@@ -197,7 +196,7 @@ export async function removeAssignmentForHabit(
   habitId: string,
   datePrefix?: string,
 ): Promise<void> {
-  const day = datePrefix ?? getTodayPrefix();
+  const day = datePrefix ?? getLocalDayKey();
   await assignmentRepo.deleteUncompletedByHabitAndDate(habitId, day);
 }
 
@@ -207,7 +206,7 @@ export async function removeAssignmentForHabit(
  * el snapshot del momento en que se completaron.
  */
 export async function updateTodaySnapshotForHabit(habitId: string): Promise<void> {
-  const today = getTodayPrefix();
+  const today = getLocalDayKey();
   const habit = await habitRepo.findById(habitId);
   if (!habit) return;
 
@@ -236,7 +235,7 @@ export async function updateTodaySnapshotForHabit(habitId: string): Promise<void
  * En días con performed_habits existentes, marca como completado.
  */
 export async function checkAndBackfillHistory(): Promise<void> {
-  const today = getTodayPrefix();
+  const today = getLocalDayKey();
   const latestDate = await assignmentRepo.findLatestDate();
 
   if (!latestDate) {
@@ -254,7 +253,7 @@ async function backfillRange(start: string, end: string): Promise<void> {
   const current = new Date(`${start}T00:00:00Z`);
   const endDate = new Date(`${end}T00:00:00Z`);
   while (current <= endDate) {
-    await ensureAssignmentsForDate(dateToPrefix(current));
+    await ensureAssignmentsForDate(formatDateStr(current));
     current.setUTCDate(current.getUTCDate() + 1);
   }
 }
@@ -367,12 +366,6 @@ function getPeriodRange(datePrefix: string, frequency: Frequency): [string, stri
   monday.setUTCDate(d.getUTCDate() - dayOfWeek);
   const sunday = new Date(monday);
   sunday.setUTCDate(monday.getUTCDate() + 6);
-  return [dateToPrefix(monday), dateToPrefix(sunday)];
+  return [formatDateStr(monday), formatDateStr(sunday)];
 }
 
-// exported for unit tests
-export function nextDay(dateStr: string): string {
-  const d = new Date(`${dateStr}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + 1);
-  return dateToPrefix(d);
-}

@@ -28,7 +28,7 @@ import {
   ALERT_IMPORT, ALERT_IMPORT_SUCCESS, ALERT_IMPORT_ERROR, ALERT_EXPORT_ERROR,
 } from '../config/constants';
 import { formatRelativeBackup } from '../utils/dateFormat';
-import { getTodayPrefix } from '../services/db';
+import { getLocalDayKey } from '../utils/date';
 import { useIsMounted } from '../hooks/useIsMounted';
 import { styles, switchColors, colors } from './SettingsScreen.styles';
 import { iconDefaults } from '../styles/ui.styles';
@@ -114,7 +114,7 @@ export function SettingsScreen() {
       if (!imported) { setIsImporting(false); return; }
 
       // Refrescar todos los stores tras la importación
-      const today = getTodayPrefix();
+      const today = getLocalDayKey();
       await Promise.all([fetchHabitsForDate(today), fetchLibrary()]);
       Alert.alert(ALERT_IMPORT_SUCCESS.title, ALERT_IMPORT_SUCCESS.message);
     } catch (err) {

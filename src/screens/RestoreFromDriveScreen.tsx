@@ -19,7 +19,7 @@ import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import * as drive from '../services/driveBackupService';
 import { useHabitStore } from '../store/useHabitStore';
 import { formatDateEs, formatSize } from '../utils/dateFormat';
-import { getTodayPrefix } from '../services/db';
+import { getLocalDayKey } from '../utils/date';
 import { useIsMounted } from '../hooks/useIsMounted';
 import {
   ALERT_DRIVE_RESTORE_CONFIRM,
@@ -124,7 +124,7 @@ export function RestoreFromDriveScreen() {
     setOverlayMsg(RESTORE_SCREEN_OVERLAY_RESTORING);
     try {
       await drive.applyRestore(payload);
-      const today = getTodayPrefix();
+      const today = getLocalDayKey();
       await Promise.all([fetchHabitsForDate(today), fetchLibrary()]);
       if (!mountedRef.current) return; // WR-03
       const fechaLabel = formatDateEs(new Date(payload.exportedAt));

@@ -22,8 +22,3 @@ export function isValidDateString(dateStr: string | null | undefined): dateStr i
   if (!dateStr) return false;
   return /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
 }
-
-/** Convierte un objeto Date a prefijo YYYY-MM-DD (UTC). */
-export function dateToPrefix(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}

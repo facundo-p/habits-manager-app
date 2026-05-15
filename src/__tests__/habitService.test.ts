@@ -12,11 +12,11 @@ import { createTestDatabase, resetTestDatabase } from './setup/testDatabase';
 
 const TODAY = '2026-04-26';
 
-jest.mock('../services/db', () => {
-  const actual = jest.requireActual('../services/db');
+jest.mock('../utils/date', () => {
+  const actual = jest.requireActual('../utils/date');
   return {
     ...actual,
-    getTodayPrefix: jest.fn(() => TODAY),
+    getLocalDayKey: jest.fn(() => TODAY),
     getNowTimestamp: jest.fn(() => `${TODAY} 10:00:00`),
     getTimestampForDate: jest.fn((date: string) => `${date} 10:00:00`),
   };

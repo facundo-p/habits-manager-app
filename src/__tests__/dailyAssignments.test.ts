@@ -22,15 +22,15 @@ import {
 } from './setup/testDatabase';
 
 // Fijar "hoy" para que los tests sean deterministas
-jest.mock('../services/db', () => {
-  const actual = jest.requireActual('../services/db');
-  const mockGetTodayPrefix = jest.fn(() => TODAY);
+jest.mock('../utils/date', () => {
+  const actual = jest.requireActual('../utils/date');
+  const mockGetLocalDayKey = jest.fn(() => TODAY);
   return {
     ...actual,
-    getTodayPrefix: mockGetTodayPrefix,
+    getLocalDayKey: mockGetLocalDayKey,
     getNowTimestamp: jest.fn(() => `${TODAY} 10:00:00`),
     getTimestampForDate: jest.fn((date: string) => `${date} 10:00:00`),
-    isFutureDate: (datePrefix: string) => datePrefix > mockGetTodayPrefix(),
+    isFutureDate: (datePrefix: string) => datePrefix > mockGetLocalDayKey(),
   };
 });
 
@@ -41,13 +41,12 @@ import {
   updateTodaySnapshotForHabit,
   checkAndBackfillHistory,
   addSpontaneous,
-  nextDay,
   getItemsForDate,
   completeAssignment,
   uncompleteAssignment,
 } from '../services/assignmentService';
 
-import { isFutureDate } from '../services/db';
+import { isFutureDate, nextDay } from '../utils/date';
 
 const TODAY = '2026-03-11';
 const YESTERDAY = '2026-03-10';
