@@ -10,6 +10,7 @@ import * as Crypto from 'expo-crypto';
 import { DB_NAME, SEED_HABITS } from '../config/constants';
 import { parseAndValidateCategories } from '../utils/parsing';
 import { runMigrations } from './migrations/migrationV1';
+import { cleanupPreV2Snapshots } from './preV2Snapshot';
 
 let _db: SQLite.SQLiteDatabase | null = null;
 
@@ -85,6 +86,7 @@ export async function initDatabase(): Promise<void> {
   await executeSchema(db);
   await migrateSchema(db);
   await runMigrations(db);          // REQ-04-06: versioned migrations (Phase 4)
+  await cleanupPreV2Snapshots();    // D-06: housekeeping post-v2 (silent failure)
   await sanitizeCategories(db);
   await seedHabits(db);
 }

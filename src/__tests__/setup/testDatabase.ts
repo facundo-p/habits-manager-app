@@ -72,109 +72,54 @@ const SQL_UNIQUE_INDEX = `
   WHERE habit_id IS NOT NULL
 `;
 
-// ─── Schema v2 (espejo de research/ARCHITECTURE.md §2) ──────────────────────
-// Estas constantes serán importadas por src/db/migrations/migrationV2.ts (Wave 3)
-// como single source of truth — ver T-01-01 en 01-01-PLAN.md threat model.
+// ─── Schema v2 — single source of truth ──────────────────────────────────────
+// Las DDL viven en src/services/migrations/migrationV2.ts (T-01-01 mitigation:
+// fixture y migration prod usan idéntico SQL). Re-exportadas acá con suffix _V2
+// para preservar la API del fixture.
 
-export const SQL_CREATE_MOOD_LOG_V2 = `
-  CREATE TABLE IF NOT EXISTS mood_log (
-    id TEXT PRIMARY KEY,
-    kind TEXT NOT NULL CHECK (kind IN ('morning','evening','note','reflection')),
-    date_key TEXT NOT NULL,
-    occurred_at TEXT NOT NULL,
-    mood_value REAL NOT NULL,
-    mood_scale_version TEXT NOT NULL DEFAULT 'v1',
-    sleep_hours REAL,
-    comment TEXT,
-    habit_id TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE SET NULL
-  )
-`;
-
-export const SQL_CREATE_TEXT_LIBRARY_V2 = `
-  CREATE TABLE IF NOT EXISTS text_library (
-    id TEXT PRIMARY KEY,
-    kind TEXT NOT NULL CHECK (kind IN ('quote')),
-    text TEXT NOT NULL,
-    author TEXT,
-    is_active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )
-`;
-
-export const SQL_CREATE_WEEKLY_REVIEWS_V2 = `
-  CREATE TABLE IF NOT EXISTS weekly_reviews (
-    id TEXT PRIMARY KEY,
-    week_key TEXT NOT NULL UNIQUE,
-    week_start TEXT NOT NULL,
-    mood_avg REAL,
-    sleep_avg REAL,
-    top_habits_json TEXT NOT NULL DEFAULT '[]',
-    answers_json TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )
-`;
-
-export const SQL_CREATE_DRAFTS_V2 = `
-  CREATE TABLE IF NOT EXISTS drafts (
-    id TEXT PRIMARY KEY,
-    kind TEXT NOT NULL,
-    key TEXT NOT NULL,
-    payload_json TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )
-`;
-
-export const SQL_INDEX_MOOD_LOG_ONE_PER_DAY = `
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_mood_log_one_per_day
-  ON mood_log(kind, date_key)
-  WHERE kind IN ('morning','evening')
-`;
-
-export const SQL_INDEX_MOOD_LOG_DATE_KEY = `
-  CREATE INDEX IF NOT EXISTS idx_mood_log_date_key ON mood_log(date_key)
-`;
-
-export const SQL_INDEX_MOOD_LOG_KIND = `
-  CREATE INDEX IF NOT EXISTS idx_mood_log_kind ON mood_log(kind)
-`;
-
-export const SQL_INDEX_MOOD_LOG_HABIT_ID = `
-  CREATE INDEX IF NOT EXISTS idx_mood_log_habit_id
-  ON mood_log(habit_id)
-  WHERE habit_id IS NOT NULL
-`;
-
-export const SQL_INDEX_TEXT_LIBRARY_KIND_ACTIVE = `
-  CREATE INDEX IF NOT EXISTS idx_text_library_kind_active
-  ON text_library(kind, is_active)
-`;
-
-export const SQL_INDEX_DRAFTS_KIND_KEY = `
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_drafts_kind_key
-  ON drafts(kind, key)
-`;
+import {
+  SQL_CREATE_MOOD_LOG as SQL_CREATE_MOOD_LOG_V2,
+  SQL_CREATE_MOOD_LOG_ONE_PER_DAY as SQL_INDEX_MOOD_LOG_ONE_PER_DAY,
+  SQL_CREATE_MOOD_LOG_DATE_KEY as SQL_INDEX_MOOD_LOG_DATE_KEY,
+  SQL_CREATE_MOOD_LOG_KIND as SQL_INDEX_MOOD_LOG_KIND,
+  SQL_CREATE_MOOD_LOG_HABIT_ID as SQL_INDEX_MOOD_LOG_HABIT_ID,
+  SQL_CREATE_TEXT_LIBRARY as SQL_CREATE_TEXT_LIBRARY_V2,
+  SQL_CREATE_TEXT_LIBRARY_KIND_ACTIVE as SQL_INDEX_TEXT_LIBRARY_KIND_ACTIVE,
+  SQL_CREATE_WEEKLY_REVIEWS as SQL_CREATE_WEEKLY_REVIEWS_V2,
+  SQL_CREATE_DRAFTS as SQL_CREATE_DRAFTS_V2,
+  SQL_CREATE_DRAFTS_KIND_KEY as SQL_INDEX_DRAFTS_KIND_KEY,
+} from '../../services/migrations/migrationV2';
 
 // ─── API pública ─────────────────────────────────────────────────────────────
 
 let _db: Database.Database | null = null;
 
 /**
- * Crea una DB in-memory fresca e inyecta en el mock de expo-sqlite.
- * Llamar en beforeEach().
+ * Crea una DB in-memory fresca con el schema v2 (post-migration).
+ * Es la baseline de tests para todo el código v1.1 — moodService, backupService,
+ * etc. esperan mood_log/text_library/weekly_reviews/drafts presentes.
+ *
+ * Para tests que necesitan estado pre-v1 (duplicados) o pre-v2 (mood_entries),
+ * usar `createPreMigrationTestDatabase` o `createPreMigrationV2TestDatabase`.
  */
 export function createTestDatabase(): Database.Database {
   _db = new Database(':memory:');
   _db.pragma('foreign_keys = ON');
   _db.exec(SQL_CREATE_HABITS);
   _db.exec(SQL_CREATE_PERFORMED);
-  _db.exec(SQL_CREATE_MOODS);
   _db.exec(SQL_CREATE_ASSIGNMENTS);
   _db.exec(SQL_UNIQUE_INDEX);
+  _db.exec(SQL_CREATE_MOOD_LOG_V2);
+  _db.exec(SQL_INDEX_MOOD_LOG_ONE_PER_DAY);
+  _db.exec(SQL_INDEX_MOOD_LOG_DATE_KEY);
+  _db.exec(SQL_INDEX_MOOD_LOG_KIND);
+  _db.exec(SQL_INDEX_MOOD_LOG_HABIT_ID);
+  _db.exec(SQL_CREATE_TEXT_LIBRARY_V2);
+  _db.exec(SQL_INDEX_TEXT_LIBRARY_KIND_ACTIVE);
+  _db.exec(SQL_CREATE_WEEKLY_REVIEWS_V2);
+  _db.exec(SQL_CREATE_DRAFTS_V2);
+  _db.exec(SQL_INDEX_DRAFTS_KIND_KEY);
+  _db.pragma('user_version = 2');
   setMockDatabase(_db);
   return _db;
 }

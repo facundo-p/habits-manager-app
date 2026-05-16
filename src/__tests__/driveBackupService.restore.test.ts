@@ -54,6 +54,9 @@ const SAMPLE_BACKUP = {
   performed_habits: [],
   mood_entries: [],
   daily_assignments: [],
+  mood_log: [],
+  text_library: [],
+  weekly_reviews: [],
 };
 
 describe('restore flow (prepareRestore + applyRestore)', () => {
@@ -66,7 +69,8 @@ describe('restore flow (prepareRestore + applyRestore)', () => {
     restoreDataMock.mockResolvedValue(undefined);
     // buildBackupData: snapshot vacío
     buildBackupDataMock.mockResolvedValue({
-      version: 1, exportedAt: 'snapshot', habits: [], performed_habits: [], mood_entries: [], daily_assignments: [],
+      version: 2, exportedAt: 'snapshot', habits: [], performed_habits: [], daily_assignments: [],
+      mood_log: [], text_library: [], weekly_reviews: [],
     });
     // FS mocks: success
     writeAsStringAsyncMock.mockResolvedValue(undefined);
@@ -92,7 +96,7 @@ describe('restore flow (prepareRestore + applyRestore)', () => {
     // download exactly once
     expect((global.fetch as jest.Mock)).toHaveBeenCalledTimes(1);
     // counts derivados de data
-    expect(result.counts).toEqual({ habits: 1, performed_habits: 0, mood_entries: 0, daily_assignments: 0 });
+    expect(result.counts).toEqual({ habits: 1, performed_habits: 0, mood: 0, daily_assignments: 0 });
     expect(result.exportedAt).toBe('2026-04-27T00:00:00Z');
     expect(result.data.habits).toHaveLength(1);
 
@@ -118,7 +122,7 @@ describe('restore flow (prepareRestore + applyRestore)', () => {
   test('applyRestore: orden estricto build → write → restore → cleanup', async () => {
     const payload = {
       data: SAMPLE_BACKUP,
-      counts: { habits: 1, performed_habits: 0, mood_entries: 0, daily_assignments: 0 },
+      counts: { habits: 1, performed_habits: 0, mood: 0, daily_assignments: 0 },
       exportedAt: SAMPLE_BACKUP.exportedAt,
     };
     await applyRestore(payload);
@@ -139,7 +143,7 @@ describe('restore flow (prepareRestore + applyRestore)', () => {
   test('applyRestore: cleanup borra sólo cozyhabits-pre-restore-*.json y preserva el más reciente (WR-02)', async () => {
     const payload = {
       data: SAMPLE_BACKUP,
-      counts: { habits: 1, performed_habits: 0, mood_entries: 0, daily_assignments: 0 },
+      counts: { habits: 1, performed_habits: 0, mood: 0, daily_assignments: 0 },
       exportedAt: SAMPLE_BACKUP.exportedAt,
     };
     await applyRestore(payload);
@@ -165,7 +169,7 @@ describe('restore flow (prepareRestore + applyRestore)', () => {
     writeAsStringAsyncMock.mockRejectedValueOnce(new Error('disk full'));
     const payload = {
       data: SAMPLE_BACKUP,
-      counts: { habits: 1, performed_habits: 0, mood_entries: 0, daily_assignments: 0 },
+      counts: { habits: 1, performed_habits: 0, mood: 0, daily_assignments: 0 },
       exportedAt: SAMPLE_BACKUP.exportedAt,
     };
 
@@ -179,7 +183,7 @@ describe('restore flow (prepareRestore + applyRestore)', () => {
     restoreDataMock.mockRejectedValueOnce(new Error('SQL boom'));
     const payload = {
       data: SAMPLE_BACKUP,
-      counts: { habits: 1, performed_habits: 0, mood_entries: 0, daily_assignments: 0 },
+      counts: { habits: 1, performed_habits: 0, mood: 0, daily_assignments: 0 },
       exportedAt: SAMPLE_BACKUP.exportedAt,
     };
 

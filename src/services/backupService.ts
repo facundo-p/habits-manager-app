@@ -18,7 +18,16 @@ import * as DocumentPicker from 'expo-document-picker';
 import { BACKUP_VERSION, BACKUP_FILENAME } from '../config/constants';
 import * as backupRepo from '../repositories/backupRepository';
 import { dedupeAssignmentsArray } from '../utils/dedupeAssignmentsArray';
-import type { BackupData, Habit, PerformedHabit, MoodEntry, DailyAssignment } from '../types';
+import type {
+  BackupData,
+  Habit,
+  PerformedHabit,
+  MoodEntry,
+  MoodLogEntry,
+  TextLibraryItem,
+  WeeklyReview,
+  DailyAssignment,
+} from '../types';
 
 // ─── Exportar ────────────────────────────────────────────────────────
 
@@ -63,12 +72,25 @@ export async function importBackup(): Promise<boolean> {
 
 // ─── API pública (consumida por exportBackup/importBackup y driveBackupService) ──
 
+/**
+ * Construye el backup shape v2: reads paralelos de las 6 tablas de dominio.
+ * Drafts EXCLUIDOS (transient — FOUND-04).
+ */
 export async function buildBackupData(): Promise<BackupData> {
-  const [habits, performed_habits, mood_entries, daily_assignments] = await Promise.all([
+  const [
+    habits,
+    performed_habits,
+    daily_assignments,
+    mood_log,
+    text_library,
+    weekly_reviews,
+  ] = await Promise.all([
     backupRepo.readAllHabits(),
     backupRepo.readAllPerformed(),
-    backupRepo.readAllMoods(),
     backupRepo.readAllAssignments(),
+    backupRepo.readAllMoodLog(),
+    backupRepo.readAllTextLibrary(),
+    backupRepo.readAllWeeklyReviews(),
   ]);
 
   return {
@@ -76,79 +98,132 @@ export async function buildBackupData(): Promise<BackupData> {
     exportedAt: new Date().toISOString(),
     habits,
     performed_habits,
-    mood_entries,
     daily_assignments,
+    mood_log,
+    text_library,
+    weekly_reviews,
   };
 }
 
+// ─── parseAndValidate v1/v2/v3 dispatcher ────────────────────────────
+
+const ERR_INVALID = 'Formato de respaldo inválido';
+const ERR_FUTURE_VERSION =
+  'Backup más nuevo que la app — actualizá la app para restaurar.';
+
 /**
- * Parsea un JSON de respaldo y valida su shape via type guards sobre `unknown`.
- * Reemplaza el patrón anterior (cast a Partial + cast final completo) por narrowing en runtime
- * (DEBT-02 alcance ampliado D-04). Mensajes de error en español preservados.
+ * Parsea + valida un JSON de respaldo y normaliza al shape v2.
+ * - v1: acepta y mapea `mood_entries[]` → `mood_log[]` en `restoreData`
+ *   (acá se preserva en `mood_entries?` para que `restoreData` haga el mapping).
+ * - v2: shape final. Permite `text_library` / `weekly_reviews` ausentes (`[]` default).
+ * - v3+: throw con mensaje accionable (T-04-05).
  */
 export function parseAndValidate(json: string): BackupData {
   let raw: unknown;
   try {
     raw = JSON.parse(json);
   } catch {
-    throw new Error('Formato de respaldo inválido: JSON malformado');
+    throw new Error(`${ERR_INVALID}: JSON malformado`);
   }
 
   if (raw == null || typeof raw !== 'object') {
-    throw new Error('Formato de respaldo inválido');
+    throw new Error(ERR_INVALID);
   }
-
   const data = raw as Record<string, unknown>;
 
-  if (typeof data.version !== 'number' || data.version > BACKUP_VERSION) {
-    throw new Error(`Versión de respaldo no soportada: ${data.version}`);
+  if (typeof data.version !== 'number') {
+    throw new Error(ERR_INVALID);
   }
-  if (data.version < BACKUP_VERSION) {
-    console.warn(`[parseAndValidate] backup version ${data.version} < ${BACKUP_VERSION}`);
+  if (data.version > BACKUP_VERSION) {
+    throw new Error(ERR_FUTURE_VERSION);
   }
-  if (!Array.isArray(data.habits)) {
-    throw new Error('Formato de respaldo inválido');
-  }
-  if (!Array.isArray(data.performed_habits)) {
-    throw new Error('Falta performed_habits en el respaldo');
-  }
-  if (!Array.isArray(data.mood_entries)) {
-    throw new Error('Falta mood_entries en el respaldo');
+  if (!Array.isArray(data.habits) || !Array.isArray(data.performed_habits)) {
+    throw new Error(ERR_INVALID);
   }
 
-  // Validación profunda de cada item queda fuera de scope de Phase 2 (Phase 3 la refinará).
-  // Acá solo garantizamos que cada campo es un Array y que version es number.
+  if (data.version === 1) return parseV1(data);
+  return parseV2(data);
+}
+
+function parseV1(data: Record<string, unknown>): BackupData {
+  if (!Array.isArray(data.mood_entries)) {
+    throw new Error('Falta mood_entries en el respaldo v1');
+  }
   return {
-    version: data.version,
+    version: 1,
     exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : new Date().toISOString(),
     habits: data.habits as Habit[],
     performed_habits: data.performed_habits as PerformedHabit[],
-    mood_entries: data.mood_entries as MoodEntry[],
     daily_assignments: Array.isArray(data.daily_assignments)
       ? (data.daily_assignments as DailyAssignment[])
+      : [],
+    mood_log: [],
+    text_library: [],
+    weekly_reviews: [],
+    mood_entries: data.mood_entries as MoodEntry[],
+  };
+}
+
+function parseV2(data: Record<string, unknown>): BackupData {
+  if (!Array.isArray(data.mood_log)) {
+    throw new Error('Falta mood_log en el respaldo v2');
+  }
+  return {
+    version: 2,
+    exportedAt: typeof data.exportedAt === 'string' ? data.exportedAt : new Date().toISOString(),
+    habits: data.habits as Habit[],
+    performed_habits: data.performed_habits as PerformedHabit[],
+    daily_assignments: Array.isArray(data.daily_assignments)
+      ? (data.daily_assignments as DailyAssignment[])
+      : [],
+    mood_log: data.mood_log as MoodLogEntry[],
+    text_library: Array.isArray(data.text_library)
+      ? (data.text_library as TextLibraryItem[])
+      : [],
+    weekly_reviews: Array.isArray(data.weekly_reviews)
+      ? (data.weekly_reviews as WeeklyReview[])
       : [],
   };
 }
 
 /**
- * Restaura un backup completo. Aplica pre-clean a daily_assignments via
- * dedupeAssignmentsArray (REQ-04-03) para que un backup pre-Phase-4 con
- * duplicados no rompa el partial UNIQUE INDEX (idx_unique_habit_date).
- *
- * Heurística D-03 aplicada en memoria; spontaneous (habit_id=null) se preservan.
- *
- * driveBackupService.applyRestore consume esta función — el pre-clean se
- * aplica transparentemente al restore desde Drive también.
+ * Restaura un backup. Si shape es v1, mapea `mood_entries[]` →
+ * `mood_log[]` kind='reflection' antes del restore (mismo mapping que
+ * el INSERT...SELECT de migrationV2 — single semantic).
  */
 export async function restoreData(data: BackupData): Promise<void> {
   const dedupedAssignments = dedupeAssignmentsArray(
     data.daily_assignments,
     data.performed_habits,
   );
+  const moodLog =
+    data.version === 1 && data.mood_entries
+      ? mapMoodEntriesToMoodLog(data.mood_entries)
+      : data.mood_log;
   await backupRepo.restoreAllData(
     data.habits,
     data.performed_habits,
-    data.mood_entries,
     dedupedAssignments,
+    moodLog,
+    data.text_library,
+    data.weekly_reviews,
   );
 }
+
+/** v1 → v2 mapping en memoria. Misma semántica que el SQL INSERT...SELECT de migrationV2. */
+function mapMoodEntriesToMoodLog(entries: MoodEntry[]): MoodLogEntry[] {
+  return entries.map((e) => ({
+    id: e.id,
+    kind: 'reflection',
+    date_key: e.timestamp.slice(0, 10),
+    occurred_at: e.timestamp,
+    mood_value: e.value,
+    mood_scale_version: 'v1',
+    sleep_hours: null,
+    comment: e.description,
+    habit_id: e.habit_id,
+    created_at: e.timestamp,
+    updated_at: e.timestamp,
+  }));
+}
+

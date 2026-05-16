@@ -225,7 +225,7 @@ export const ROUTES = {
 } as const;
 
 // ─── Backup ─────────────────────────────────────────────────────────
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 export const BACKUP_FILENAME = 'cozy_habit_backup.json';
 
 export const ALERT_IMPORT = {

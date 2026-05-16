@@ -378,7 +378,12 @@ async function fetchOrFail(url: string, init?: RequestInit): Promise<Response> {
 export interface RestoreCounts {
   habits: number;
   performed_habits: number;
-  mood_entries: number;
+  /**
+   * Conteo unificado de registros de ánimo. Para backups v1 = `mood_entries.length`;
+   * para v2 = `mood_log.length`. La UI muestra "Registros de ánimo: N" sin
+   * distinguir versión (research §4 Open Q resuelta).
+   */
+  mood: number;
   daily_assignments: number;
 }
 
@@ -416,7 +421,10 @@ export async function prepareRestore(fileId: string): Promise<RestorePayload> {
     counts: {
       habits: data.habits.length,
       performed_habits: data.performed_habits.length,
-      mood_entries: data.mood_entries.length,
+      mood:
+        data.version === 1 && data.mood_entries
+          ? data.mood_entries.length
+          : data.mood_log.length,
       daily_assignments: data.daily_assignments.length,
     },
     exportedAt: data.exportedAt,

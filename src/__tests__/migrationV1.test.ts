@@ -10,6 +10,13 @@
  *   - REQ-04-09: rechazo de duplicados regulares post-migration
  */
 
+// v1 tests focalizan SOLO en migration v1. Mockeamos v2 a no-op para que el
+// dispatcher de runMigrations no contamine los asserts de user_version y no
+// requiera fixtures v2 (mood_log no existe en createPreMigrationTestDatabase).
+jest.mock('../services/migrations/migrationV2', () => ({
+  migrationV2_addWellbeingTables: jest.fn().mockResolvedValue(undefined),
+}));
+
 import type Database from 'better-sqlite3';
 import {
   createPreMigrationTestDatabase,
