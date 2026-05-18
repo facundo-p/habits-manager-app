@@ -299,6 +299,49 @@ State is managed centrally via Zustand stores, which orchestrate service calls a
 
 - **Assets:** No asset caching beyond Expo's native caching
 
+## Phase 1 v1.1 Changes (2026-05-13)
+
+Phase 1 of v1.1 shipped 8 plans introducing new infrastructure, a versioned migration system, and dev-only surfaces. The high-level architecture (3 layers + Zustand) is unchanged; the additions below extend it.
+
+**New Utility Layer — `src/utils/date.ts`:**
+- Single source of truth (SoT) for date helpers, replacing scattered helpers previously living in `src/services/db.ts` and `src/utils/dateHelpers.ts`.
+- Exports: `getLocalDayKey` (replaces the deprecated `getTodayPrefix`), `isFutureDate`, `nextDay`, `formatDateStr`, `getNowTimestamp`, `getTimestampForDate` (plus re-exports of legacy format helpers).
+- Plan 02 codemod renamed every `getTodayPrefix` usage → `getLocalDayKey`. `dateToPrefix` and date helpers in `db.ts` were deleted.
+
+**New Boot Orchestrator — `src/services/bootSequence.ts`:**
+- Encapsulates the app's boot lifecycle (font load, DB init, migrations, backfill, draft purge) behind a state machine that returns a `MigrationState`.
+- All dependencies are injectable, making the boot path unit-testable.
+- `App.tsx` was refactored from procedural init to a state-machine consumer of `bootSequence`.
+- On migration failure, the new `MigrationErrorScreen` (`src/components/screens/MigrationErrorScreen.tsx`) is rendered instead of the app shell.
+
+**Schema v2 — 4 New Tables + Versioned Migration:**
+- New migration `src/services/migrations/migrationV2.ts` runs atomically: takes a pre-v2 snapshot via `src/services/preV2Snapshot.ts` (`buildV1Snapshot` + `cleanupPreV2Snapshots`), copies `mood_entries` → `mood_log` via `INSERT...SELECT`, then DROPs the legacy table.
+- New tables: `mood_log` (unified mood capture with `kind` discriminator), `text_library` (reusable text snippets), `weekly_reviews` (weekly reflection records), `drafts` (autosave staging).
+- New repositories: `src/repositories/moodLogRepository.ts`, `textLibraryRepository.ts`, `weeklyReviewsRepository.ts`, `draftsRepository.ts` (4 functions: upsert/find/deleteOne/purgeOlderThan).
+- New types: `MoodLogEntry`, `TextLibraryItem`, `WeeklyReview`, `BackupDataV1`.
+- Schema-breaking migrations now RETHROW errors (vs. silent log) so `bootSequence` can route into `MigrationErrorScreen`. Dev flag `__DEV_FORCE_MIGRATION_FAIL` in `migrationV2.ts` (gated by `__DEV__`) and a Dev tools toggle in `SettingsScreen` allow exercising the failure path.
+
+**Backup Versioning — `BACKUP_VERSION = 2`:**
+- `backupService.parseAndValidate` is now a v1/v2/v3 dispatcher; legacy v1 backups are accepted and lifted forward.
+- `backupRepository.restoreAllData` signature grew from 4 → 6 args to cover the new tables.
+
+**Service Refactors:**
+- `moodService` is now a thin wrapper over `moodLogRepository` (writes with `kind='reflection'`). The legacy `mood_entries` path is gone.
+- Mood scale moved to `src/config/mood.ts` (SoT): re-exports `MOOD_MIN/MAX/STEP/DEFAULT_VALUE` plus `MOOD_LABELS`, `moodLabelFor`, and `MOOD_SCALE_VERSION = 'v1'`.
+- New shared `src/components/shared/MoodPicker.tsx` (+ `.styles.ts`) is now composed by `ReflectionModal` (no inline mood UI).
+
+**Draft Autosave Infrastructure:**
+- New hook `src/hooks/useDraftAutosave.ts` (exposes `createDraftAutosaveScheduler` as a pure helper for testing).
+- `initDatabase` calls `purgeStaleDrafts` post-migrations with a 7-day cutoff.
+
+**New Dev-Only Surfaces (gated by `__DEV__`):**
+- `src/components/dev/DraftHarnessModal.tsx` (+ `.styles.ts`) — manual harness for exercising the draft pipeline.
+- `MigrationErrorScreen` is dev-triggerable via the Settings toggle described above.
+
+**Docs:**
+- New canonical voice/style guide: `.planning/docs/tone-of-voice.md`.
+
 ---
 
 *Architecture analysis: 2026-03-17*
+*Phase 1 v1.1 addendum: 2026-05-13*
