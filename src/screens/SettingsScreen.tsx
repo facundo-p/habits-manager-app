@@ -24,6 +24,7 @@ import { useDriveActions } from '../hooks/useDriveActions';
 import { NotebookPaper } from '../components/layout/NotebookPaper';
 import { AppScreenHeader } from '../components/layout/AppScreenHeader';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
+import { DraftHarnessModal } from '../components/dev/DraftHarnessModal';
 import {
   ALERT_IMPORT, ALERT_IMPORT_SUCCESS, ALERT_IMPORT_ERROR, ALERT_EXPORT_ERROR,
 } from '../config/constants';
@@ -78,6 +79,8 @@ export function SettingsScreen() {
     hapticsEnabled, soundsEnabled,
     toggleHaptics, toggleSounds,
   } = useSettingsStore();
+
+  const [draftHarnessVisible, setDraftHarnessVisible] = useState(false);
 
   // Drive auth slice (Phase 3)
   const googleEmail = useSettingsStore((s) => s.googleEmail);
@@ -283,9 +286,31 @@ export function SettingsScreen() {
         </Text>
       </NotebookPaper>
 
+      {__DEV__ && (
+        <>
+          <View className={styles.sectionGap} />
+          <Text className={styles.sectionTitle}>Dev tools</Text>
+          <NotebookPaper>
+            <Pressable
+              className={styles.toggleRow}
+              onPress={() => setDraftHarnessVisible(true)}
+            >
+              <Text className={styles.toggleLabel}>Dev — Draft harness</Text>
+              <Text className={styles.placeholderBadge}>FOUND-05 UAT</Text>
+            </Pressable>
+          </NotebookPaper>
+        </>
+      )}
+
       <Text className={styles.versionText}>CozyHabit v1.0.0</Text>
     </ScrollView>
     <LoadingOverlay visible={isUploading} message="Subiendo a Drive..." />
+    {__DEV__ && (
+      <DraftHarnessModal
+        visible={draftHarnessVisible}
+        onClose={() => setDraftHarnessVisible(false)}
+      />
+    )}
     </>
   );
 }

@@ -11,6 +11,9 @@ import { DB_NAME, SEED_HABITS } from '../config/constants';
 import { parseAndValidateCategories } from '../utils/parsing';
 import { runMigrations } from './migrations/migrationV1';
 import { cleanupPreV2Snapshots } from './preV2Snapshot';
+import * as draftsRepo from '../repositories/draftsRepository';
+
+const DRAFTS_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 let _db: SQLite.SQLiteDatabase | null = null;
 
@@ -87,8 +90,23 @@ export async function initDatabase(): Promise<void> {
   await migrateSchema(db);
   await runMigrations(db);          // REQ-04-06: versioned migrations (Phase 4)
   await cleanupPreV2Snapshots();    // D-06: housekeeping post-v2 (silent failure)
+  await purgeStaleDrafts();         // FOUND-05: drafts TTL 7d (silent failure)
   await sanitizeCategories(db);
   await seedHabits(db);
+}
+
+/**
+ * Borra drafts con `updated_at < now - 7d`. Falla silenciosa para no bloquear
+ * boot ante un error de SQLite housekeeping (research §7 Open Q).
+ */
+async function purgeStaleDrafts(): Promise<void> {
+  try {
+    const cutoffIso = new Date(Date.now() - DRAFTS_RETENTION_MS).toISOString();
+    await draftsRepo.purgeOlderThan(cutoffIso);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'unknown';
+    console.warn('[purgeStaleDrafts] skipped:', msg);
+  }
 }
 
 async function executeSchema(db: SQLite.SQLiteDatabase): Promise<void> {
