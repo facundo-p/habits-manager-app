@@ -24,6 +24,13 @@ import { buildV1Snapshot } from '../preV2Snapshot';
 
 const TARGET_VERSION = 2;
 
+/**
+ * Dev-only override para UAT Scenario 2 (Plan 06).
+ * En production builds el guard `if (__DEV__)` impide cualquier efecto (T-06-02).
+ * UAT lo toggea desde Settings → Dev tools.
+ */
+export const __DEV_FORCE_MIGRATION_FAIL: { value: boolean } = { value: false };
+
 // ─── Schema v2 — Single source of truth ──────────────────────────────
 //
 // Estas constants son importadas también por __tests__/setup/testDatabase.ts
@@ -231,6 +238,9 @@ export async function migrationV2_addWellbeingTables(
 
   try {
     await db.withTransactionAsync(async () => {
+      if (__DEV__ && __DEV_FORCE_MIGRATION_FAIL.value) {
+        throw new Error('FORCED FAIL FOR UAT (Scenario 2)');
+      }
       await createV2Tables(db);
       await migrateMoodEntriesToMoodLog(db, preCount);
       await db.execAsync(`PRAGMA user_version = ${TARGET_VERSION}`);
