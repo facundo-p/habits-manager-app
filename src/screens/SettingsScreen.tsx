@@ -25,6 +25,7 @@ import { NotebookPaper } from '../components/layout/NotebookPaper';
 import { AppScreenHeader } from '../components/layout/AppScreenHeader';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import { DraftHarnessModal } from '../components/dev/DraftHarnessModal';
+import { __DEV_FORCE_MIGRATION_FAIL } from '../services/migrations/migrationV2';
 import {
   ALERT_IMPORT, ALERT_IMPORT_SUCCESS, ALERT_IMPORT_ERROR, ALERT_EXPORT_ERROR,
 } from '../config/constants';
@@ -81,6 +82,13 @@ export function SettingsScreen() {
   } = useSettingsStore();
 
   const [draftHarnessVisible, setDraftHarnessVisible] = useState(false);
+  const [forceMigrationFail, setForceMigrationFail] = useState(__DEV_FORCE_MIGRATION_FAIL.value);
+
+  const toggleForceMigrationFail = useCallback(() => {
+    const next = !__DEV_FORCE_MIGRATION_FAIL.value;
+    __DEV_FORCE_MIGRATION_FAIL.value = next;
+    setForceMigrationFail(next);
+  }, []);
 
   // Drive auth slice (Phase 3)
   const googleEmail = useSettingsStore((s) => s.googleEmail);
@@ -298,6 +306,11 @@ export function SettingsScreen() {
               <Text className={styles.toggleLabel}>Dev — Draft harness</Text>
               <Text className={styles.placeholderBadge}>FOUND-05 UAT</Text>
             </Pressable>
+            <ToggleRow
+              label="Forzar fallo de migration v2 (UAT)"
+              value={forceMigrationFail}
+              onToggle={toggleForceMigrationFail}
+            />
           </NotebookPaper>
         </>
       )}

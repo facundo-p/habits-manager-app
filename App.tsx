@@ -1,7 +1,7 @@
 import './global.css';
 
-import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert, ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -18,10 +18,12 @@ import { HabitLibraryScreen } from './src/screens/HabitLibraryScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { RestoreFromDriveScreen } from './src/screens/RestoreFromDriveScreen';
+import { MigrationErrorScreen } from './src/components/screens/MigrationErrorScreen';
 import { ROUTES } from './src/config/constants';
 import { tabBarTheme, iconDefaults, colors } from './src/styles/ui.styles';
 import { initDatabase } from './src/services/db';
 import { checkAndBackfillHistory } from './src/services/assignmentService';
+import { bootSequence, type MigrationState } from './src/services/bootSequence';
 import { configureGoogleSignin, silentSignInIfPossible } from './src/services/googleAuth';
 import { useHabitStore } from './src/store/useHabitStore';
 import { useSettingsStore } from './src/store/useSettingsStore';
@@ -100,18 +102,21 @@ export default function App() {
     Lato_400Regular,
   });
 
-  useEffect(() => {
-    // REQ-04-06 — INVARIANTE: El orden initDatabase -> checkAndBackfillHistory es crítico.
-    // initDatabase corre runMigrations (PRAGMA user_version + UNIQUE INDEX).
-    // PROHIBIDO importar/llamar funciones del subsistema de assignments (repository
-    // o service de daily_assignments) desde el render-phase de App.tsx antes de
-    // que esta cadena resuelva. Si necesitás un nuevo hook al boot, encadenalo como
-    // `.then(() => tuFuncion())` después de checkAndBackfillHistory.
-    initDatabase()
-      .then(() => checkAndBackfillHistory())
-      .then(() => { if (__DEV__) console.log('DB inicializada y backfill completado'); })
-      .catch((err) => console.error('Error inicializando DB:', err));
+  const [migrationState, setMigrationState] = useState<MigrationState>({ status: 'pending' });
+
+  // REQ-04-06 — INVARIANTE: bootSequence corre initDatabase → checkAndBackfillHistory
+  // en orden. Si initDatabase falla (migration v2), retorna 'failed' y App renderiza
+  // MigrationErrorScreen bloqueando el NavigationContainer (D-05).
+  const runBoot = useCallback(() => {
+    setMigrationState({ status: 'pending' });
+    bootSequence({ initDatabase, checkAndBackfillHistory })
+      .then(setMigrationState)
+      .catch((err) => setMigrationState({ status: 'failed', error: err }));
   }, []);
+
+  useEffect(() => {
+    runBoot();
+  }, [runBoot]);
 
   useEffect(() => {
     configureGoogleSignin();
@@ -130,11 +135,45 @@ export default function App() {
     }
   }, [fontError]);
 
+  function handleRestore() {
+    // Phase 1: el flow de restore desde el error screen está deferido a una
+    // iteración futura (requiere mount de Drive auth + RestoreFromDriveScreen
+    // fuera del NavigationContainer principal, no trivial). Por ahora ofrecemos
+    // guidance accionable + acceso al snapshot pre-v2 vía file manager (per
+    // documentación del PR). UAT Scenario 2 valida que el botón es visible.
+    Alert.alert(
+      'Restaurar desde backup',
+      'Para restaurar tu información:\n\n1. Cerrá esta pantalla con "Reintentar migración" (si está disponible).\n2. Desde Ajustes → "Importar respaldo" o "Restaurar desde Drive", elegí tu backup.\n\nSi tenés un snapshot pre-actualización, está en el directorio de la app (pre-v2-snapshot-*.json).',
+      [{ text: 'Entendido' }],
+    );
+  }
+
   if (!fontsLoaded && !fontError) {
     return (
       <View style={nativeStyles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.amber600} />
       </View>
+    );
+  }
+
+  if (migrationState.status === 'pending') {
+    return (
+      <View style={nativeStyles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.amber600} />
+      </View>
+    );
+  }
+
+  if (migrationState.status === 'failed') {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <MigrationErrorScreen
+          error={migrationState.error}
+          onRetry={runBoot}
+          onRestore={handleRestore}
+        />
+      </SafeAreaProvider>
     );
   }
 
