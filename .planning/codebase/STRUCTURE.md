@@ -290,6 +290,43 @@ habits-manager-app/
 - Generated: Yes (created by `expo` CLI)
 - Committed: No (in .gitignore)
 
+## Phase 1 v1.1 Additions (2026-05-13)
+
+The following files were added during Phase 1 of v1.1. They follow the existing layout/naming conventions documented above.
+
+**Utilities:**
+- `src/utils/date.ts` — Single source of truth for date helpers (`getLocalDayKey`, `isFutureDate`, `nextDay`, `formatDateStr`, `getNowTimestamp`, `getTimestampForDate`).
+
+**Config:**
+- `src/config/mood.ts` — SoT for the mood scale (re-exports `MOOD_MIN/MAX/STEP/DEFAULT_VALUE`, plus `MOOD_LABELS`, `moodLabelFor`, `MOOD_SCALE_VERSION`).
+
+**Shared components:**
+- `src/components/shared/MoodPicker.tsx` + `MoodPicker.styles.ts` — Reusable mood selection UI (composed by `ReflectionModal`).
+
+**Screens:**
+- `src/components/screens/MigrationErrorScreen.tsx` + `MigrationErrorScreen.styles.ts` — Rendered by `bootSequence` when a migration fails.
+
+**Dev-only surfaces (gated by `__DEV__`):**
+- `src/components/dev/DraftHarnessModal.tsx` + `DraftHarnessModal.styles.ts` — Manual harness for exercising the draft pipeline.
+
+**Repositories:**
+- `src/repositories/moodLogRepository.ts` — CRUD for `mood_log` (unified mood capture).
+- `src/repositories/textLibraryRepository.ts` — CRUD for `text_library`.
+- `src/repositories/weeklyReviewsRepository.ts` — CRUD for `weekly_reviews`.
+- `src/repositories/draftsRepository.ts` — 4 functions (upsert/find/deleteOne/purgeOlderThan) for `drafts`.
+
+**Services:**
+- `src/services/bootSequence.ts` — Boot lifecycle orchestrator with injectable deps; returns `MigrationState`.
+- `src/services/migrations/migrationV2.ts` — Atomic v2 migration (`mood_entries` → `mood_log`).
+- `src/services/preV2Snapshot.ts` — Pre-v2 snapshot helpers (`buildV1Snapshot`, `cleanupPreV2Snapshots`).
+
+**Hooks:**
+- `src/hooks/useDraftAutosave.ts` — Draft autosave hook (exports pure `createDraftAutosaveScheduler` helper).
+
+**Planning docs:**
+- `.planning/docs/tone-of-voice.md` — Canonical voice/style guide.
+
 ---
 
 *Structure analysis: 2026-03-17*
+*Phase 1 v1.1 addendum: 2026-05-13*

@@ -160,6 +160,23 @@ export async function ensureAssignmentsForDate(datePrefix: string): Promise<void
 **Exception — Drive operations:**
 Screens (`SettingsScreen`, `RestoreFromDriveScreen`) call `driveBackupService` directly, bypassing the store layer. Drive ops are stateless (no cached state, transient tokens) — adding a store would only duplicate boilerplate. This is an intentional exception documented here.
 
+## Phase 1 v1.1 Conventions (2026-05-13)
+
+The following rules were established during Phase 1 of v1.1.
+
+**Date handling:**
+- Para "hoy" usar `getLocalDayKey()` desde `src/utils/date.ts`. NUNCA `new Date().toISOString().slice(0,10)` (eso resuelve en UTC y rompe en zonas con offset negativo cerca de medianoche).
+- `src/utils/date.ts` es la SoT para helpers de fecha; no agregar nuevos helpers en `db.ts` ni duplicar lógica en `dateHelpers.ts`.
+
+**Migrations:**
+- Versionadas mediante `PRAGMA user_version`. Cada nueva migration vive en `src/services/migrations/migrationVN.ts` siguiendo el template de `migrationV1.ts` (un solo archivo, función async, idempotente).
+- Si la migration es schema-breaking, **RETHROW en catch** (vs. silent log) para activar la `MigrationErrorScreen` vía `bootSequence`. El silent-catch deja el DB en estado parcial y oculta el bug al usuario.
+
+**Repositories:**
+- SQL constants al tope del archivo (`UPPER_SNAKE_CASE`, e.g., `SQL_INSERT`, `SQL_BY_DATE`).
+- **No business logic en repos** — funciones "tontas": thin wrappers sobre `db.getAllAsync` / `getFirstAsync` / `runAsync`. Cualquier validación, enriquecimiento o coordinación va en `services/`.
+
 ---
 
 *Convention analysis: 2026-03-17*
+*Phase 1 v1.1 addendum: 2026-05-13*

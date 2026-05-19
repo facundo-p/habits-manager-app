@@ -75,6 +75,28 @@
 - [ ] Persistencia de settings con AsyncStorage (useSettingsStore)
 - [ ] Agregar tests para servicios críticos (habitService, assignmentService, backupService)
 
+## Phase 1 v1.1 — Review (closed 2026-05-18)
+
+8 plans merged a main: PRs #25 (Plan 01), #27 (Plan 03), #28 (Plan 02), #29 (Plan 04), #30 (Plan 05), #32 (Plan 06), #33 (Plan 07). Plan 08 (este) cierra la wave docs.
+
+### What worked
+- **Codemod date helpers en una wave aislada (Plan 02)**: low blast radius; full suite verde al primer intento post-fix de un missed call site. La separación codemod-before-migration evitó mezclar concerns.
+- **migrationV2 reusando template de migrationV1**: pattern probado, el atomic transaction + assertion pattern transfirió sin sorpresas.
+- **Wave 0 de tests skeleton (Plan 01)** previno tasks RED-MISSING en waves siguientes (Nyquist compliance). Cada wave consumió todos `it.todo` predefinidos.
+- **Option B scheduler extraído en useDraftAutosave (Plan 05)** permitió testear debounce con fake timers sin `@testing-library/react-native`. Pattern reusable en futuros hooks.
+- **`bootSequence` deps inyectables (Plan 06)** simplifica los tests vs. mockear módulos enteros.
+
+### What was bumpy
+- **`@testing-library/react-native` no instalado** (research A5 confirmed missing): degradó FOUND-02 UI test a UAT; planner pivoteó al pure scheduler extraction como mitigación.
+- **Pre-v2 snapshot + buildV1Snapshot** requirió preservar SQL legacy `readAllMoods` temporalmente con table-exists guard — tradeoff aceptado.
+- **Plan 04 atomic commit boundary** + ~1500 LOC: excede 400-LOC cap, pre-autorizado por Pitfall #4. El PR necesitó documentación extra del waiver.
+- **GitHub no auto-retargeteó PRs stacked** (incidentes #26 → #27, #31 → #32): perdimos tiempo abriendo PR de reemplazo. Patrón a evitar: cuando el PR base mergea casi al mismo tiempo que el head, retarget puede fallar. Workaround documentado: separate-branch off main para Plan paralelizables (e.g., Plan 07).
+
+### Deferred
+- **UAT manual con APK real** (Scenarios 1/2/3 del `01-HUMAN-UAT.md`) — usuario autorizó saltar para Plan 06 y Plan 08; confiamos en unit tests para shipping. Pendiente ejecutar antes del primer release v1.1 a usuarios.
+- **Full embedded restore flow desde MigrationErrorScreen** — Phase 1 minimal entrega Alert con guidance; embedded restore (snapshot pre-v2 + Drive desde error state) queda para Phase 2+.
+- **`__DEV_FORCE_MIGRATION_FAIL` persistente** — in-memory, se resetea con force-kill. Para validar Retry-Fail-Retry consecutivos se requeriría AsyncStorage. No bloqueante para Phase 1.
+
 ## Completado
 
 ### Refactor & Deuda técnica (2026-03)
